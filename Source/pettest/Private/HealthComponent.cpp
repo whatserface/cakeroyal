@@ -41,7 +41,10 @@ void UHealthComponent::OnTakeAnyDamage_Implementation(AActor* DamagedActor, floa
 	}
 }
 
-void UHealthComponent::SetHealth_Implementation(float NewHealth)
+void UHealthComponent::SetHealth(float NewHealth)
 {
-	Health = FMath::Clamp<float>(NewHealth, 0.0f, MaxHealth);
+	if (GetOwnerRole() == ROLE_Authority)
+	{
+		Health = FMath::Clamp<float>(NewHealth, 0.0f, MaxHealth);
+	}
 }

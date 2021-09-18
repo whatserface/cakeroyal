@@ -18,15 +18,20 @@ public:
 
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	void StartFire();
-	UFUNCTION(Server, Unreliable, Category = "Shooting")
+
 	void StopFire();
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	TSubclassOf<ARifleWeapon> WeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FName WeaponSocketName = "WeaponSocket";
 private:
 	void SpawnWeapon();
+
 	ARifleWeapon* Weapon;
 };

@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "RifleWeapon.generated.h"
 
+class USkeletalMeshComponent;
+
 UCLASS()
 class PETTEST_API ARifleWeapon : public AActor
 {
@@ -18,7 +20,18 @@ public:
 	void StartFire();
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	void StopFire();
-protected:
-	virtual void BeginPlay() override;
 
+	UFUNCTION(NetMulticast, Unreliable, WithValidation, Category = "Spawn")
+	void AttachToPlayer(const FName& SocketName);
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Appearance")
+	USkeletalMeshComponent* WeaponMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
+	float ShootLength = 5000.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
+	float DamageAmount = 50.0f;
+	
+	virtual void BeginPlay() override;
 };

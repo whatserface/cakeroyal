@@ -34,6 +34,5 @@ private:
 	UFUNCTION(Server, Reliable)
 	void OnTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 	
-	UFUNCTION(Server, Unreliable)
 	void SetHealth(float NewHealth);
 };

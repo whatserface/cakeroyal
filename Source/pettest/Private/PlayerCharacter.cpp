@@ -3,12 +3,15 @@
 
 #include "PlayerCharacter.h"
 #include "CharacterController.h"
-#include "HealthComponent.h"
 #include "Components/InputComponent.h"
 #include "MyCharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "HealthComponent.h"
+#include "WeaponComponent.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogPlayerCharacter, All, All)
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 	: Super(ObjInit.SetDefaultSubobjectClass<UMyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -18,6 +21,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>("HealthComponent");
 	HealthComponent->SetIsReplicated(true);
+	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
+	WeaponComponent->SetIsReplicated(true);
 
 	OuterMesh = CreateDefaultSubobject<USkeletalMeshComponent>("CharacterMesh1");
 	OuterMesh->SetupAttachment(RootComponent);
@@ -54,6 +59,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &APlayerCharacter::Jump);
 	PlayerInputComponent->BindAction("Run", EInputEvent::IE_Pressed, this, &APlayerCharacter::Run);
 	PlayerInputComponent->BindAction("Run", EInputEvent::IE_Released, this, &APlayerCharacter::StopRun);
+	PlayerInputComponent->BindAction("Shoot", EInputEvent::IE_Pressed, WeaponComponent, &UWeaponComponent::StartFire);
 }
 
 void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -66,7 +72,10 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void APlayerCharacter::MoveForward(float Value)
 {
-	SetbIsMovingForward(Value > 0.0f);
+	if ((Value > 0.0f) != IsMovingForward)
+	{
+		SetbIsMovingForward(Value > 0.0f);
+	}
 	if (Value == 0.0f) return;
 
 	AddMovementInput(GetActorForwardVector(), Value);
@@ -111,22 +120,21 @@ void APlayerCharacter::StopRun()
 
 void APlayerCharacter::SetbIsMovingForward_Implementation(bool Value)
 {
-	if (GetLocalRole() == ROLE_Authority) IsMovingForward = Value;
+	if (HasAuthority()) IsMovingForward = Value;
 }
 
 void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 {
-	if (GetLocalRole() == ROLE_Authority) WantsToRun = Value;
+	if (HasAuthority()) WantsToRun = Value;
 }
-
 
 void APlayerCharacter::Server_OnDeath_Implementation()
 {
-	SetLifeSpan(LifeSpan);
-
+	SetLifeSpan(LastLifeSpan);
+	UE_LOG(LogPlayerCharacter, Display, TEXT("Player: %s will die in a few seconds"), *GetName());
 	Multicast_Ragdoll();
 
-	if (GetLocalRole() == ROLE_Authority) {
+	if (HasAuthority()) {
 		GetCharacterMovement()->DisableMovement();
 		GetMesh()->SetVisibility(false, true);
 		const auto CharController = Cast<ACharacterController>(Controller);
@@ -142,8 +150,14 @@ void APlayerCharacter::Multicast_Ragdoll_Implementation()
 	{
 		GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 		OuterMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		OuterMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 		OuterMesh->SetSimulatePhysics(true);
 	}
+}
+
+USkeletalMeshComponent* APlayerCharacter::GetLocalMesh()
+{
+	return IsLocallyControlled() ? GetMesh() : OuterMesh;
 }
 
 float APlayerCharacter::GetMovementDirection() const

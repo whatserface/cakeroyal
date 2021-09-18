@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "PlayerCharacter.generated.h"
 
+class UWeaponComponent;
 class UHealthComponent;
 class FObjectInitializer;
 class USkeletalMeshComponent;
@@ -22,21 +23,28 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	USkeletalMeshComponent* GetLocalMesh();
+
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	bool IsRunning() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	float GetMovementDirection() const;
-protected:
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
-	UHealthComponent* HealthComponent;
+	USkeletalMeshComponent* GetOuterMesh() { return OuterMesh; }
+protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* OuterMesh;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UWeaponComponent* WeaponComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UHealthComponent* HealthComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Death")
-	float LifeSpan = 2.5f;
+	float LastLifeSpan = 2.5f;
 
 	virtual void BeginPlay() override;
 
