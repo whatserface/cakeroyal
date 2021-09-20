@@ -21,8 +21,8 @@ public:
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	void StopFire();
 
-	UFUNCTION(NetMulticast, Unreliable, WithValidation, Category = "Spawn")
-	void AttachToPlayer(const FName& SocketName);
+	UFUNCTION(Server, Unreliable, Category = "Spawn")
+	void AttachToPlayer(const FName& SocketName, bool IsForFPP);
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Appearance")
 	USkeletalMeshComponent* WeaponMesh;

@@ -23,8 +23,6 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	USkeletalMeshComponent* GetLocalMesh();
-
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	bool IsRunning() const;
 
@@ -61,19 +59,17 @@ private:
 	UPROPERTY(Replicated)
 	bool IsMovingForward = false;
 
-	void MoveForward(float Value);
-	void MoveRight(float Value);
-
-	void Run();
-	void StopRun();
-
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void SetbIsMovingForward(bool Value);
 
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void SetbWantsToRun(bool Value);
 
-
+	void MoveForward(float Value);
+	void MoveRight(float Value);
 	void TurnAround(float Value);
 	void LookUp(float Value);
+
+	void Run();
+	void StopRun();
 };

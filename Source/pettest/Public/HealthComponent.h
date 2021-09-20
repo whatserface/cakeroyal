@@ -21,11 +21,12 @@ public:
 	bool IsDead() const { return FMath::IsNearlyZero(Health); }
 
 	FOnDeath OnDeath;
-protected:
-	virtual void BeginPlay() override;
 
+protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "0"))
 	float MaxHealth = 100.0f;
+	
+	virtual void BeginPlay() override;
 
 private:
 	UPROPERTY(Replicated)

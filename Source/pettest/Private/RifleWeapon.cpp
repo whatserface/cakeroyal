@@ -63,16 +63,20 @@ void ARifleWeapon::StopFire_Implementation()
 	//
 }
 
-bool ARifleWeapon::AttachToPlayer_Validate(const FName& SocketName)
-{
-	return HasAuthority();
-}
-
-void ARifleWeapon::AttachToPlayer_Implementation(const FName& SocketName)
+void ARifleWeapon::AttachToPlayer_Implementation(const FName& SocketName, bool IsForFPP)
 {
 	const auto Player = Cast<APlayerCharacter>(GetOwner());
 	if (!Player) { UE_LOG(LogRifleWeapon, Warning, TEXT("When attach the cast was failed")); return; }
 
-	FAttachmentTransformRules TransformRules(EAttachmentRule::KeepRelative, false);
-	AttachToComponent(Player->GetLocalMesh(), TransformRules, SocketName);
+	FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
+	if (IsForFPP)
+	{
+		AttachToComponent(Player->GetMesh(), TransformRules, SocketName);
+		WeaponMesh->SetOnlyOwnerSee(true);
+	}
+	else
+	{
+		AttachToComponent(Player->GetOuterMesh(), TransformRules, SocketName);
+		WeaponMesh->SetOwnerNoSee(true);
+	}
 }

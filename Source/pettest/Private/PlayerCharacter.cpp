@@ -38,8 +38,8 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	check(HealthComponent)
-		HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
+	check(HealthComponent);
+	HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -153,11 +153,6 @@ void APlayerCharacter::Multicast_Ragdoll_Implementation()
 		OuterMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 		OuterMesh->SetSimulatePhysics(true);
 	}
-}
-
-USkeletalMeshComponent* APlayerCharacter::GetLocalMesh()
-{
-	return IsLocallyControlled() ? GetMesh() : OuterMesh;
 }
 
 float APlayerCharacter::GetMovementDirection() const

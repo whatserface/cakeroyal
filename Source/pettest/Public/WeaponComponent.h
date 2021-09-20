@@ -8,30 +8,57 @@
 
 class ARifleWeapon;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+USTRUCT(BlueprintType)
+struct FTPWeapon
+{
+	GENERATED_USTRUCT_BODY()
+
+	ARifleWeapon* FPPWeapon;
+	ARifleWeapon* TPPWeapon;
+	bool DestroyAndDetach(AActor* DestroyWeapon)
+	{
+		if (!DestroyWeapon) return false;
+
+		DestroyWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		DestroyWeapon->Destroy();
+		return true;
+	}
+};
+
+
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class PETTEST_API UWeaponComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	UWeaponComponent();
 
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	void StartFire();
-
+	
 	void StopFire();
+	
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
-	virtual void BeginPlay() override;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	TSubclassOf<ARifleWeapon> WeaponClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FName WeaponSocketName = "WeaponSocket";
-private:
-	void SpawnWeapon();
+	
+	UPROPERTY(Replicated)
+	FTPWeapon ObservedWeapons;
+	
+	virtual void BeginPlay() override;
 
+private:
+	UPROPERTY(Replicated)
 	ARifleWeapon* Weapon;
+	
+	UFUNCTION(Server, Unreliable, Category = "Shooting")
+	void SpawnWeapon();
 };
