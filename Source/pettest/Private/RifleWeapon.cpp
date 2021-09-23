@@ -9,21 +9,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogRifleWeapon, All, All)
 
-ARifleWeapon::ARifleWeapon()
-{
-	PrimaryActorTick.bCanEverTick = false;
-	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponMesh");
-	WeaponMesh->SetIsReplicated(true);
-	check(SetRootComponent(WeaponMesh));
-	bReplicates = true;
-	bNetUseOwnerRelevancy = true;
-}
-
-void ARifleWeapon::BeginPlay()
-{
-	Super::BeginPlay();
-
-}
+ARifleWeapon::ARifleWeapon() : Super() {}
 
 void ARifleWeapon::StartFire_Implementation()
 {
@@ -35,10 +21,13 @@ void ARifleWeapon::StartFire_Implementation()
 	FVector TraceStart, TraceEnd;
 	FRotator EyesRotation;
 	GetOwner()->GetActorEyesViewPoint(TraceStart, EyesRotation);
-	TraceEnd = TraceStart + EyesRotation.Vector() * ShootLength;
+	TraceEnd = TraceStart + EyesRotation.Vector() * WeaponInfo.ShootLength;
 
 	FCollisionQueryParams CollisionParams;
-	CollisionParams.AddIgnoredActor(GetOwner());
+	TArray<const AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+	ActorsToIgnore.Add(GetOwner());
+	CollisionParams.AddIgnoredActors(ActorsToIgnore);
 	FHitResult HitResult;
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, CollisionParams))
 	{
@@ -48,7 +37,7 @@ void ARifleWeapon::StartFire_Implementation()
 		const auto OwnerPawn = Cast<APawn>(GetOwner());
 		if (!OwnerPawn) return;
 
-		HitResult.GetActor()->TakeDamage(DamageAmount, FDamageEvent{}, OwnerPawn->GetController(), this);
+		HitResult.GetActor()->TakeDamage(WeaponInfo.Damage, FDamageEvent{}, OwnerPawn->GetController(), this);
 		UE_LOG(LogRifleWeapon, Display, TEXT("Damage was applied to: %s"), *HitResult.GetActor()->GetName());
 	}
 	else
@@ -56,27 +45,4 @@ void ARifleWeapon::StartFire_Implementation()
 		UE_LOG(LogRifleWeapon, Warning, TEXT("Trace didn't hit anyone"));
 	}
 	UKismetSystemLibrary::DrawDebugArrow(this, TraceStart, TraceEnd, 5.0f, FLinearColor::Red, 5.0f, 1.0f);
-}
-
-void ARifleWeapon::StopFire_Implementation()
-{
-	//
-}
-
-void ARifleWeapon::AttachToPlayer_Implementation(const FName& SocketName, bool IsForFPP)
-{
-	const auto Player = Cast<APlayerCharacter>(GetOwner());
-	if (!Player) { UE_LOG(LogRifleWeapon, Warning, TEXT("When attach the cast was failed")); return; }
-
-	FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
-	if (IsForFPP)
-	{
-		AttachToComponent(Player->GetMesh(), TransformRules, SocketName);
-		WeaponMesh->SetOnlyOwnerSee(true);
-	}
-	else
-	{
-		AttachToComponent(Player->GetOuterMesh(), TransformRules, SocketName);
-		WeaponMesh->SetOwnerNoSee(true);
-	}
 }

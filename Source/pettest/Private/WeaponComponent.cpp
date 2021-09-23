@@ -17,7 +17,7 @@ UWeaponComponent::UWeaponComponent()
 void UWeaponComponent::BeginPlay()
 {
     Super::BeginPlay();
-    SpawnWeapon();
+    //SpawnWeapon();
 }
 
 void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -54,8 +54,8 @@ void UWeaponComponent::SpawnWeapon_Implementation()
     if (!TWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("TPP Weapon Actor couldn't be spawned")); return; }
 
     ObservedWeapons.TPPWeapon = TWeapon;
-    FWeapon->AttachToPlayer(WeaponSocketName, true);
-    TWeapon->AttachToPlayer(WeaponSocketName, false);
+    //FWeapon->AttachToPlayer(WeaponSocketName, true);
+    //TWeapon->AttachToPlayer(WeaponSocketName, false);
 
     UE_LOG(LogWeaponComponent, Display, TEXT("Spawn was successful"));
 }
@@ -72,5 +72,5 @@ void UWeaponComponent::StopFire()
 {
     if (!Weapon) return;
 
-    Weapon->StopFire();
+    //Weapon->StopFire();
 }

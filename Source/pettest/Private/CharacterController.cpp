@@ -17,8 +17,7 @@ void ACharacterController::OnRep_Pawn()
 
 void ACharacterController::StartSpectating()
 {
-	if (!HasAuthority())
-		return;
+	if (!HasAuthority()) return;
 
 	PlayerState->SetIsSpectator(true);
 	ChangeState(NAME_Spectating);
@@ -27,8 +26,7 @@ void ACharacterController::StartSpectating()
 
 void ACharacterController::StartPlaying()
 {
-	if (!HasAuthority())
-		return;
+	if (!HasAuthority()) return;
 
 	PlayerState->SetIsSpectator(false);
 	ChangeState(NAME_Playing);

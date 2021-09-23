@@ -3,13 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "ThirdPersonWeapon.h"
 #include "RifleWeapon.generated.h"
 
 class USkeletalMeshComponent;
+class AThirdPersonWeapon;
 
 UCLASS()
-class PETTEST_API ARifleWeapon : public AActor
+class PETTEST_API ARifleWeapon : public AThirdPersonWeapon
 {
 	GENERATED_BODY()
 	
@@ -17,21 +18,5 @@ public:
 	ARifleWeapon();
 
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
-	void StartFire();
-	UFUNCTION(Server, Unreliable, Category = "Shooting")
-	void StopFire();
-
-	UFUNCTION(Server, Unreliable, Category = "Spawn")
-	void AttachToPlayer(const FName& SocketName, bool IsForFPP);
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Appearance")
-	USkeletalMeshComponent* WeaponMesh;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
-	float ShootLength = 5000.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
-	float DamageAmount = 50.0f;
-	
-	virtual void BeginPlay() override;
+	virtual void StartFire();
 };

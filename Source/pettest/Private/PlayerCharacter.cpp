@@ -9,7 +9,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "HealthComponent.h"
-#include "WeaponComponent.h"
+#include "ThirdPersonWeapon.h"
+#include "FirstPersonWeapon.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPlayerCharacter, All, All)
 
@@ -18,11 +19,12 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>("HealthComponent");
 	HealthComponent->SetIsReplicated(true);
-	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
-	WeaponComponent->SetIsReplicated(true);
+	//WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
+	//WeaponComponent->SetIsReplicated(true);
 
 	OuterMesh = CreateDefaultSubobject<USkeletalMeshComponent>("CharacterMesh1");
 	OuterMesh->SetupAttachment(RootComponent);
@@ -40,6 +42,7 @@ void APlayerCharacter::BeginPlay()
 
 	check(HealthComponent);
 	HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
+	SpawnWeaponTPP();
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -59,7 +62,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &APlayerCharacter::Jump);
 	PlayerInputComponent->BindAction("Run", EInputEvent::IE_Pressed, this, &APlayerCharacter::Run);
 	PlayerInputComponent->BindAction("Run", EInputEvent::IE_Released, this, &APlayerCharacter::StopRun);
-	PlayerInputComponent->BindAction("Shoot", EInputEvent::IE_Pressed, WeaponComponent, &UWeaponComponent::StartFire);
+	PlayerInputComponent->BindAction("Shoot", EInputEvent::IE_Pressed, this, &APlayerCharacter::StartFire);
 }
 
 void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -128,6 +131,12 @@ void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 	if (HasAuthority()) WantsToRun = Value;
 }
 
+void APlayerCharacter::StartFire_Implementation()
+{
+	if (!TPPWeapon) return;
+	TPPWeapon->StartFire();
+}
+
 void APlayerCharacter::Server_OnDeath_Implementation()
 {
 	SetLifeSpan(LastLifeSpan);
@@ -137,6 +146,12 @@ void APlayerCharacter::Server_OnDeath_Implementation()
 	if (HasAuthority()) {
 		GetCharacterMovement()->DisableMovement();
 		GetMesh()->SetVisibility(false, true);
+
+		TPPWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		TPPWeapon->Destroy();
+		FPPWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		FPPWeapon->Destroy();
+
 		const auto CharController = Cast<ACharacterController>(Controller);
 		if (!CharController) return;
 
@@ -163,4 +178,30 @@ float APlayerCharacter::GetMovementDirection() const
 	const auto Degrees = FMath::RadiansToDegrees(AngleBetween);
 	const auto CrossProduct = FVector::CrossProduct(GetActorForwardVector(), VelocityNormal);
 	return CrossProduct.IsZero() ? Degrees : Degrees * FMath::Sign(CrossProduct.Z);
+}
+
+void APlayerCharacter::SpawnWeaponTPP_Implementation()
+{
+	if (!GetWorld() || !HasAuthority()) return;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	TPPWeapon = GetWorld()->SpawnActor<AThirdPersonWeapon>(TPPWeaponClass, SpawnParams);
+	if (!TPPWeapon) { UE_LOG(LogPlayerCharacter, Warning, TEXT("TPP Weapon couldn't be spawned")); return; }
+	FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
+	TPPWeapon->AttachToComponent(OuterMesh, TransformRules, TPPWeapon->GetSocketName());
+	TPPWeapon->SpawnWeaponFPP();
+	//FTimerHandle UnusedHandle;
+	//GetWorldTimerManager().SetTimer(UnusedHandle, TPPWeapon, &AThirdPersonWeapon::SpawnWeaponFPP, 0.2f, false);
+}
+
+bool APlayerCharacter::SetFPPWeapon_Validate(AFirstPersonWeapon* Weapon)
+{
+	return Weapon != nullptr;
+}
+
+void APlayerCharacter::SetFPPWeapon_Implementation(AFirstPersonWeapon* Weapon)
+{
+	FPPWeapon = Weapon;
 }
