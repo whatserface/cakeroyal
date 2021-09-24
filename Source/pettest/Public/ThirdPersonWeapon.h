@@ -38,19 +38,13 @@ public:
 	
 	virtual void StartFire();
 
-	FName GetSocketName() { return SocketAttachName; }
-
-	UFUNCTION(Client, Unreliable, Category = "Weapon")
-	void SpawnWeaponFPP();
+	FWeaponInfo GetWeaponInfo() const { return WeaponInfo; }
 
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* WeaponMesh;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Components")
-	FName SocketAttachName = "WeaponSocket";
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FWeaponInfo WeaponInfo;

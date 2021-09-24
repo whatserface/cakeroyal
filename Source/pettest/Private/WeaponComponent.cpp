@@ -17,14 +17,28 @@ UWeaponComponent::UWeaponComponent()
 void UWeaponComponent::BeginPlay()
 {
     Super::BeginPlay();
-    //SpawnWeapon();
+    SpawnTPPWeapon();
 }
 
 void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     UE_LOG(LogWeaponComponent, Display, TEXT("End play reason: %s"), *StaticEnum<EEndPlayReason::Type>()->GetNameStringByValue(EndPlayReason));
-    if (!ObservedWeapons.DestroyAndDetach(ObservedWeapons.FPPWeapon)) { UE_LOG(LogWeaponComponent, Warning, TEXT("Destroying and detachment of FPP Weapon wasn't successful")); }
-    if (!ObservedWeapons.DestroyAndDetach(ObservedWeapons.TPPWeapon)) { UE_LOG(LogWeaponComponent, Warning, TEXT("Destroying and detachment of TPP Weapon wasn't successful")); }
+
+    const auto Detachment = FDetachmentTransformRules::KeepWorldTransform;
+    if (TPPWeapon) 
+    {
+        TPPWeapon->DetachFromActor(Detachment);
+        TPPWeapon->Destroy();
+        UE_LOG(LogWeaponComponent, Display, TEXT("TPP Weapon successfully destroyed"));
+    }
+    else { UE_LOG(LogWeaponComponent, Warning, TEXT("When destroying TPP Weapon was nullptr")); }
+    if (FPPWeapon)
+    {
+        FPPWeapon->DetachFromActor(Detachment);
+        FPPWeapon->Destroy();
+        UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon successfully destroyed"));
+    }
+
     Super::EndPlay(EndPlayReason);
 }
 
@@ -32,10 +46,10 @@ void UWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(UWeaponComponent, ObservedWeapons);
-    DOREPLIFETIME(UWeaponComponent, Weapon);
+    DOREPLIFETIME(UWeaponComponent, TPPWeapon);
 }
-void UWeaponComponent::SpawnWeapon_Implementation()
+
+void UWeaponComponent::SpawnTPPWeapon_Implementation()
 {
     if (!GetWorld() || !GetOwner() || !GetOwner()->HasAuthority()) return;
 
@@ -45,32 +59,46 @@ void UWeaponComponent::SpawnWeapon_Implementation()
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = Player;
     SpawnParams.Instigator = Player;
-    const auto FWeapon = GetWorld()->SpawnActor<ARifleWeapon>(WeaponClass, SpawnParams);
-    if(!FWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("FPP Weapon Actor couldn't be spawned")); return; }
-
-    ObservedWeapons.FPPWeapon = FWeapon;
-    Weapon = FWeapon;
-    const auto TWeapon = GetWorld()->SpawnActor<ARifleWeapon>(WeaponClass, SpawnParams);
-    if (!TWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("TPP Weapon Actor couldn't be spawned")); return; }
-
-    ObservedWeapons.TPPWeapon = TWeapon;
-    //FWeapon->AttachToPlayer(WeaponSocketName, true);
-    //TWeapon->AttachToPlayer(WeaponSocketName, false);
-
-    UE_LOG(LogWeaponComponent, Display, TEXT("Spawn was successful"));
+    if (!TPPWeapon)
+    {
+        const auto TWeapon = GetWorld()->SpawnActor<AThirdPersonWeapon>(TPPWeaponClass, SpawnParams);
+        if (!TWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("TPP Weapon Actor couldn't be spawned")); return; }
+    
+        TPPWeapon = TWeapon;
+    }
+    FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
+    TPPWeapon->AttachToComponent(Player->GetOuterMesh(), TransformRules, WeaponSocketName);
+    SpawnFPPWeapon();
 }
  
+void UWeaponComponent::SpawnFPPWeapon_Implementation()
+{
+    if (!GetOwner()) return;
+    const auto Player = Cast<ACharacter>(GetOwner());
+    if (!Player) { UE_LOG(LogWeaponComponent, Warning, TEXT("Cast was failed")); return; }
+    if (!Player->IsLocallyControlled()) return;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = Player;
+    SpawnParams.Instigator = Player;
+    const auto FWeapon = GetWorld()->SpawnActor<AFirstPersonWeapon>(TPPWeapon->GetWeaponInfo().FPPWeaponClass, SpawnParams);
+    if (!FWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("FPP Weapon Actor couldn't be spawned")); return; }
+
+    FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
+    FWeapon->AttachToComponent(Player->GetMesh(), TransformRules, WeaponSocketName);
+    FPPWeapon = FWeapon;
+}
+
 void UWeaponComponent::StartFire_Implementation()
 {
-    if (!Weapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null")); return; }
+    if (!TPPWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null")); return; }
 
-    UE_LOG(LogWeaponComponent, Display, TEXT("FIRED"));
-    Weapon->StartFire();
+    TPPWeapon->StartFire();
 }
 
 void UWeaponComponent::StopFire()
 {
-    if (!Weapon) return;
+    if (!TPPWeapon) { UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null")); return; }
 
     //Weapon->StopFire();
 }

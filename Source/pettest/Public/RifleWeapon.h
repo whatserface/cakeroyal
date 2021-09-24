@@ -19,4 +19,11 @@ public:
 
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	virtual void StartFire();
+
+protected:
+	UFUNCTION(BlueprintImplementableEvent, Category = "Shooting")
+	void Recoil(APawn* ApplyTo);
+
+	UFUNCTION(Client, Reliable, Category = "Shooting")
+	void Client_Recoil(APawn* ApplyTo);
 };

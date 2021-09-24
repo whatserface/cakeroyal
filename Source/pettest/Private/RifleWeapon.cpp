@@ -18,9 +18,11 @@ void ARifleWeapon::StartFire_Implementation()
 	check(GetOwner());
 	if (!GetWorld() || !HasAuthority() || !GetOwner()) { UE_LOG(LogRifleWeapon, Warning, TEXT("Something went nuts"));  return; }
 
+	const auto OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn) return;
 	FVector TraceStart, TraceEnd;
 	FRotator EyesRotation;
-	GetOwner()->GetActorEyesViewPoint(TraceStart, EyesRotation);
+	OwnerPawn->GetActorEyesViewPoint(TraceStart, EyesRotation);
 	TraceEnd = TraceStart + EyesRotation.Vector() * WeaponInfo.ShootLength;
 
 	FCollisionQueryParams CollisionParams;
@@ -34,9 +36,6 @@ void ARifleWeapon::StartFire_Implementation()
 		TraceEnd = HitResult.ImpactPoint;
 		if (!HitResult.GetActor()) return;
 
-		const auto OwnerPawn = Cast<APawn>(GetOwner());
-		if (!OwnerPawn) return;
-
 		HitResult.GetActor()->TakeDamage(WeaponInfo.Damage, FDamageEvent{}, OwnerPawn->GetController(), this);
 		UE_LOG(LogRifleWeapon, Display, TEXT("Damage was applied to: %s"), *HitResult.GetActor()->GetName());
 	}
@@ -45,4 +44,10 @@ void ARifleWeapon::StartFire_Implementation()
 		UE_LOG(LogRifleWeapon, Warning, TEXT("Trace didn't hit anyone"));
 	}
 	UKismetSystemLibrary::DrawDebugArrow(this, TraceStart, TraceEnd, 5.0f, FLinearColor::Red, 5.0f, 1.0f);
+	Client_Recoil(OwnerPawn);
+}
+
+void ARifleWeapon::Client_Recoil_Implementation(APawn* ApplyTo)
+{
+	Recoil(ApplyTo);
 }

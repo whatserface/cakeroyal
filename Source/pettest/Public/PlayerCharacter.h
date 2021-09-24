@@ -11,6 +11,7 @@ class FObjectInitializer;
 class USkeletalMeshComponent;
 class AThirdPersonWeapon;
 class AFirstPersonWeapon;
+class UWeaponComponent;
 
 UCLASS()
 class PETTEST_API APlayerCharacter : public ACharacter
@@ -30,23 +31,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	float GetMovementDirection() const;
 
-	UFUNCTION(Client, Unreliable, WithValidation, Category = "Weapon")
-	void SetFPPWeapon(AFirstPersonWeapon* Weapon);
-
 	USkeletalMeshComponent* GetOuterMesh() { return OuterMesh; }
 protected:
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* OuterMesh;
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
-	//UWeaponComponent* WeaponComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UWeaponComponent* WeaponComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UHealthComponent* HealthComponent;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	TSubclassOf<AThirdPersonWeapon> TPPWeaponClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Death")
 	float LastLifeSpan = 2.5f;
@@ -58,12 +52,6 @@ protected:
 
 	UFUNCTION(NetMulticast, Unreliable, Category = "Death")
 	void Multicast_Ragdoll();
-
-	UFUNCTION(Server, Unreliable, Category = "Weapon")
-	void SpawnWeaponTPP();
-
-	UFUNCTION(Server, Unreliable, Category = "Weapon")
-	void StartFire();
 private:
 	UPROPERTY(Replicated)
 	bool WantsToRun = false;
@@ -76,11 +64,6 @@ private:
 
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void SetbWantsToRun(bool Value);
-
-	UPROPERTY(Replicated)
-	AThirdPersonWeapon* TPPWeapon = nullptr;
-
-	AFirstPersonWeapon* FPPWeapon = nullptr;
 
 	void MoveForward(float Value);
 	void MoveRight(float Value);

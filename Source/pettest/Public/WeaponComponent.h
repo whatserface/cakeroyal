@@ -6,15 +6,16 @@
 #include "Components/ActorComponent.h"
 #include "WeaponComponent.generated.h"
 
-class ARifleWeapon;
+class AThirdPersonWeapon;
+class AFirstPersonWeapon;
 
 USTRUCT(BlueprintType)
 struct FTPWeapon
 {
 	GENERATED_USTRUCT_BODY()
 
-	ARifleWeapon* FPPWeapon;
-	ARifleWeapon* TPPWeapon;
+	AFirstPersonWeapon* FPPWeapon;
+	AThirdPersonWeapon* TPPWeapon;
 	bool DestroyAndDetach(AActor* DestroyWeapon)
 	{
 		if (!DestroyWeapon) return false;
@@ -38,27 +39,28 @@ public:
 	void StartFire();
 	
 	void StopFire();
-	
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	TSubclassOf<ARifleWeapon> WeaponClass;
+	TSubclassOf<AThirdPersonWeapon> TPPWeaponClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FName WeaponSocketName = "WeaponSocket";
-	
-	UPROPERTY(Replicated)
-	FTPWeapon ObservedWeapons;
 	
 	virtual void BeginPlay() override;
 
 private:
 	UPROPERTY(Replicated)
-	ARifleWeapon* Weapon;
+	AThirdPersonWeapon* TPPWeapon = nullptr;
 	
+	AFirstPersonWeapon* FPPWeapon = nullptr;
+
 	UFUNCTION(Server, Unreliable, Category = "Shooting")
-	void SpawnWeapon();
+	void SpawnTPPWeapon();
+	
+	UFUNCTION(Client, Unreliable, Category = "Shooting")
+	void SpawnFPPWeapon();
 };
