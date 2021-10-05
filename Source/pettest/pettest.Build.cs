@@ -12,7 +12,11 @@ public class pettest : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
-		PublicIncludePaths.AddRange(new string[] { "pettest/Public" });
+		PublicIncludePaths.AddRange(new string[] { "pettest/Public/Components",
+												   "pettest/Public/UI",
+												   "pettest/Public/Player",
+												   "pettest/Public/Weapon"
+													});
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
