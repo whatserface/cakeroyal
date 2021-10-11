@@ -49,12 +49,11 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	FTimerHandle HealTimer;
-
 	UPROPERTY(Replicated)
 	float Health = 0.0f;
 
 	float FiniteHP;
+	FTimerHandle HealTimer;
 
 	UFUNCTION(Server, Reliable)
 	void OnTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
@@ -64,4 +63,5 @@ private:
 
 	void Heal();
 	void SetHealth(float NewHealth);
+	void Killed(AController* KilledBy);
 };

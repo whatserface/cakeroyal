@@ -10,6 +10,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/HealthComponent.h"
 #include "Components/WeaponComponent.h"
+#include "MyGameModeBase.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPlayerCharacter, All, All)
 
@@ -24,7 +25,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 	HealthComponent->SetIsReplicated(true);
 	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
 	WeaponComponent->SetIsReplicated(true);
-
+	
 	InnerMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FPPMesh");
 	InnerMesh->SetupAttachment(RootComponent);
 	InnerMesh->SetOnlyOwnerSee(true);
@@ -135,6 +136,8 @@ void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 void APlayerCharacter::Server_OnDeath_Implementation()
 {
 	SetLifeSpan(LastLifeSpan);
+	WeaponComponent->StopFire();
+
 	UE_LOG(LogPlayerCharacter, Display, TEXT("Player: %s will die in a few seconds"), *GetName());
 	Multicast_Ragdoll();
 

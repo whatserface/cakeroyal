@@ -13,6 +13,10 @@ class PETTEST_API UPlayerHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	bool GetAmmoPercent(float& AmmoPercent) const;
+
 protected:
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthProgressBar;
@@ -23,8 +27,10 @@ protected:
 	virtual void NativeOnInitialized() override;
 
 private:
+	void OnNewPawn(APawn* NewPawn);
 	void OnHealthChanged(float NewHealth);
-	void OnAmmoChanged(int32 ClipAmmo, int32 CurrentAmmo);
+	void OnPawnDeath();
+	//void OnAmmoChanged(); по-любому понадобиться, когда придётся менять видимость виджету/играть анимацию какую-нибудь
 
 	float CurrentHealth;
 	float MaxHealth;

@@ -20,12 +20,10 @@ class PETTEST_API UWeaponComponent : public UActorComponent
 public:
 	UWeaponComponent();
 
-	FOnAmmoChangedSignature* GetOnAmmoChangedDelegate();
-
 	void StartFire();
 	void StopFire();
 
-	int32 GetWeaponBullets();
+	bool GetAmmoPercent(float& OutAmmoPercent);
 
 	UFUNCTION(Server, Unreliable)
 	void Reload();
@@ -49,6 +47,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	UAnimMontage* ReloadMontageFPP;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	UAnimMontage* RifleMontageFPP;
+	
 	virtual void BeginPlay() override;
 
 private:
@@ -60,7 +61,7 @@ private:
 	UFUNCTION(Server, Reliable, Category = "Shooting")
 	void SpawnTPPWeapon();
 	
-	UFUNCTION(Client, Reliable, Category = "Shooting")
+	UFUNCTION(Client, Unreliable, Category = "Shooting")
 	void SpawnFPPWeapon();
 
 	UFUNCTION(NetMulticast, Unreliable)

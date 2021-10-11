@@ -3,6 +3,7 @@
 
 #include "Components/HealthComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "MyGameModeBase.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogHealthComponent, All, All)
 
@@ -15,7 +16,7 @@ void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Health = MaxHealth;
+	SetHealth(MaxHealth);
 	AActor* ComponentOwner = GetOwner();
 	if(ComponentOwner)
 	{
@@ -40,6 +41,7 @@ void UHealthComponent::OnTakeAnyDamage_Implementation(AActor* DamagedActor, floa
 	SetHealth(Health - Damage);
 	if (IsDead())
 	{
+		Killed(InstigatedBy);
 		OnDeath.Broadcast();
 	}
 	else if (Health < HealThreshold)
@@ -49,27 +51,51 @@ void UHealthComponent::OnTakeAnyDamage_Implementation(AActor* DamagedActor, floa
 	}
 }
 
+void UHealthComponent::Killed(AController* KilledBy)
+{
+	if (!GetWorld() || GetOwnerRole() != ROLE_Authority) return;
+
+	const auto GameMode = GetWorld()->GetAuthGameMode<AMyGameModeBase>();
+	if (!GameMode) return;
+
+	const auto Player = Cast<APawn>(GetOwner());
+	if (GetOwner() && Player)
+	{
+		const auto VictimController = Player->Controller;
+		if (VictimController)
+		{
+			GameMode->Killed(KilledBy, VictimController);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("IN HEALTH, victim controller is nullptr"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cast was failed, victim is nullptr"));
+	}
+}
+
 void UHealthComponent::Heal()
 {
-	if (GetOwnerRole() == ROLE_Authority)
+	if (GetOwnerRole() != ROLE_Authority) return;
+	
+	SetHealth(Health + HealModifier);
+	if (Health >= FiniteHP && GetWorld())
 	{
-		SetHealth(Health + HealModifier);
-		if (Health >= FiniteHP && GetWorld())
-		{
-			GetWorld()->GetTimerManager().ClearTimer(HealTimer);
-		}
+		GetWorld()->GetTimerManager().ClearTimer(HealTimer);
 	}
 }
 
 void UHealthComponent::SetHealth(float NewHealth)
 {
-	if (GetOwnerRole() == ROLE_Authority)
-	{
-		Health = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
-		//const float HealthDelta = Health - NewHealth;
-		OnHealthChanged.Broadcast(Health/*, HealthDelta*/);
-		Client_InvokeOnHealthChanged(Health);
-	}
+	if (GetOwnerRole() != ROLE_Authority) return;
+
+	Health = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
+	//const float HealthDelta = Health - NewHealth;
+	OnHealthChanged.Broadcast(Health/*, HealthDelta*/);
+	Client_InvokeOnHealthChanged(Health);
 }
 
 bool UHealthComponent::Client_InvokeOnHealthChanged_Validate(float NewHealth)

@@ -31,6 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	float GetMovementDirection() const;
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	void PlayAnimMontageFPP(UAnimMontage* MontageToPlay);
+
 	USkeletalMeshComponent* GetInnerMesh() { return InnerMesh; }
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")

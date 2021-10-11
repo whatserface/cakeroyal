@@ -34,6 +34,7 @@ void AThirdPersonWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(AThirdPersonWeapon, Bullets, COND_OwnerOnly);
+	DOREPLIFETIME(AThirdPersonWeapon, MyPawn);
 }
 
 void AThirdPersonWeapon::StartFire()
@@ -61,7 +62,6 @@ void AThirdPersonWeapon::ReduceAmmo()
 		return;
 	}
 	Bullets--;
-	OnAmmoChanged.Broadcast(WeaponInfo.Bullets, Bullets);
 	if (Bullets == 0)
 	{
 		StopFire();
@@ -71,7 +71,7 @@ void AThirdPersonWeapon::ReduceAmmo()
 
 bool AThirdPersonWeapon::CanShoot()
 {
-	if(!GetWorld() || IsAmmoEmpty())
+	if (!GetWorld() || IsAmmoEmpty())
 	{
 		StopFire();
 		return false;
@@ -89,5 +89,16 @@ void AThirdPersonWeapon::LogAmmo()
 void AThirdPersonWeapon::Reload_Implementation()
 {
 	Bullets = WeaponInfo.Bullets;
-	OnAmmoChanged.Broadcast(Bullets, Bullets);
+}
+
+void AThirdPersonWeapon::GetWeaponBullets(float& AmmoPercent) const
+{
+	if (Bullets != 0)
+	{
+		AmmoPercent = (float)(WeaponInfo.Bullets - Bullets) / (float)(WeaponInfo.Bullets);
+	}
+	else
+	{
+		AmmoPercent = 1.0f;
+	}
 }

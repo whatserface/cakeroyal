@@ -12,4 +12,14 @@ class PETTEST_API AMyGameModeBase : public AGameModeBase
 	GENERATED_BODY()
 public:
 	AMyGameModeBase();
+	
+	void Killed(AController* KillerController, AController* VictimController);
+	void RespawnRequest(AController* Controller);
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spawn")
+	int32 RespawnTime = 5.0f;
+
+private:
+	void StartRespawn(AController* Controller);
 };

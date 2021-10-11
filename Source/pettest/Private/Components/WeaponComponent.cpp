@@ -45,6 +45,7 @@ void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
         FPPWeapon->Destroy();
         UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon successfully destroyed"));
     }
+    MyPawn = nullptr;
 
     Super::EndPlay(EndPlayReason);
 }
@@ -61,6 +62,7 @@ void UWeaponComponent::SpawnTPPWeapon_Implementation()
 {
     if (!GetWorld() || !MyPawn || !MyPawn->HasAuthority()) return;
 
+    UE_LOG(LogWeaponComponent, Display, TEXT("Spawning TPP Weapon"));
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = MyPawn;
     SpawnParams.Instigator = MyPawn;
@@ -71,16 +73,19 @@ void UWeaponComponent::SpawnTPPWeapon_Implementation()
     
         TPPWeapon = TWeapon;
     }
-
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
     TPPWeapon->AttachToComponent(MyPawn->GetMesh(), TransformRules, WeaponSocketName);
-    SpawnFPPWeapon();
+    FTimerHandle TestTimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.5f, false);
 }
  
 void UWeaponComponent::SpawnFPPWeapon_Implementation()
 {
-    if (!MyPawn->IsLocallyControlled()) return;
-
+    if (!MyPawn->IsLocallyControlled()) {
+        UE_LOG(LogWeaponComponent, Warning, TEXT("Pawn isn't locally controlled"));
+        return;
+    }
+    UE_LOG(LogWeaponComponent, Display, TEXT("Spawning FPP Weapon"));
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = MyPawn;
     SpawnParams.Instigator = MyPawn;
@@ -90,18 +95,18 @@ void UWeaponComponent::SpawnFPPWeapon_Implementation()
         UE_LOG(LogWeaponComponent, Warning, TEXT("FPP Weapon Actor couldn't be spawned"));
         return;
     }
-
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
     FWeapon->AttachToComponent(MyPawn->GetInnerMesh(), TransformRules, WeaponSocketName);
     FPPWeapon = FWeapon;
+    UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon spawn was succeeded"));
 }
 
 void UWeaponComponent::StartFire()
 {
-    if (!TPPWeapon) 
+    if (!TPPWeapon || !MyPawn)
     { 
-        UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null")); 
-        return; 
+        UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon or pawn's pointer is null"));
+        return;
     }
 
     TPPWeapon->StartFire();
@@ -109,7 +114,7 @@ void UWeaponComponent::StartFire()
 
 void UWeaponComponent::StopFire()
 {
-    if (!TPPWeapon) 
+    if (!TPPWeapon)
     {
         UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null")); 
         return; 
@@ -132,16 +137,17 @@ void UWeaponComponent::Reload_Implementation()
 
 void UWeaponComponent::PlayReloadAnim_Implementation()
 {
-    if(!IsRunningDedicatedServer() && MyPawn && ReloadMontageFPP && ReloadMontageTPP)
+    if (!IsRunningDedicatedServer() && MyPawn)
     {
-        UAnimMontage* UseAnim = MyPawn->IsLocallyControlled() ? ReloadMontageFPP : ReloadMontageTPP;
-        MyPawn->PlayAnimMontage(UseAnim);
+        if (MyPawn->IsLocallyControlled())
+        {
+            MyPawn->PlayAnimMontageFPP(ReloadMontageFPP);
+        }
+        else
+        {
+            MyPawn->PlayAnimMontage(ReloadMontageTPP);
+        }
     }
-}
-
-FOnAmmoChangedSignature* UWeaponComponent::GetOnAmmoChangedDelegate()
-{
-    return TPPWeapon ? &(TPPWeapon->OnAmmoChanged) : nullptr;
 }
 
 void UWeaponComponent::PlayAnimMontage(UAnimMontage* Animation)
@@ -149,7 +155,10 @@ void UWeaponComponent::PlayAnimMontage(UAnimMontage* Animation)
     //
 }
 
-int32 UWeaponComponent::GetWeaponBullets()
+bool UWeaponComponent::GetAmmoPercent(float& OutAmmoPercent)
 {
-    return TPPWeapon ? TPPWeapon->GetBullets() : 0;
+    if (!TPPWeapon || !MyPawn || !MyPawn->IsLocallyControlled()) return false;
+
+    TPPWeapon->GetWeaponBullets(OutAmmoPercent);
+    return true;
 }

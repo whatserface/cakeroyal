@@ -5,6 +5,7 @@
 #include "Components/ProgressBar.h"
 #include "Components/HealthComponent.h"
 #include "Components/WeaponComponent.h"
+#include "Player/CharacterController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPlayerHUDWidget, All, All)
 
@@ -12,39 +13,60 @@ void UPlayerHUDWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	if (GetOwningPlayerPawn())
+	if (GetOwningPlayer())
 	{
-		if (HealthProgressBar)
+		const auto Controller = Cast<ACharacterController>(GetOwningPlayer());
+		if (!Controller) return;
+
+		Controller->OnClientNewPawn.AddUObject(this, &UPlayerHUDWidget::OnNewPawn);
+		OnNewPawn(GetOwningPlayerPawn());
+	}
+}
+
+void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
+{
+	UE_LOG(LogPlayerHUDWidget, Display, TEXT("On new pawn present"));
+	if (!NewPawn) 
+	{
+		UE_LOG(LogPlayerHUDWidget, Warning, TEXT("pawn is nullptr"));
+	}
+	if (!NewPawn || !GetWorld() || !HealthProgressBar) return;
+	UE_LOG(LogPlayerHUDWidget, Display, TEXT("We got here!"));
+	const auto HealthComponent = NewPawn->FindComponentByClass<UHealthComponent>();
+	if (HealthComponent)
+	{
+		if (!HealthComponent->OnHealthChanged.IsBoundToObject(this)) 
 		{
-			const auto HealthComponent = GetOwningPlayerPawn()->FindComponentByClass<UHealthComponent>();
-			if (HealthComponent)
+			HealthComponent->OnHealthChanged.AddUObject(this, &UPlayerHUDWidget::OnHealthChanged);
+			if (MaxHealth == 0.0f)
 			{
-				HealthComponent->OnHealthChanged.AddUObject(this, &UPlayerHUDWidget::OnHealthChanged);
 				MaxHealth = HealthComponent->GetMaxHealth();
 			}
+			OnHealthChanged(MaxHealth);
+			UE_LOG(LogPlayerHUDWidget, Display, TEXT("Health Changed"));
 		}
-		if (AmmoProgressBar)
+		if (!HealthComponent->OnDeath.IsBoundToObject(this)) 
 		{
-			const auto WeaponComponent = GetOwningPlayer()->FindComponentByClass<UWeaponComponent>();
-			if (WeaponComponent)
-			{
-				UE_LOG(LogPlayerHUDWidget, Display, TEXT("delegate was set"));
-				/*if (WeaponComponent->GetOnAmmoChangedDelegate())
-				{
-					WeaponComponent->GetOnAmmoChangedDelegate()->AddUObject(this, &UPlayerHUDWidget::OnAmmoChanged);
-					UE_LOG(LogPlayerHUDWidget, Display, TEXT("delegate was set"));
-				}
-				else
-				{
-					UE_LOG(LogPlayerHUDWidget, Warning, TEXT("delegate ptr was null"));
-				}*/
-			}
-			else
-			{
-				UE_LOG(LogPlayerHUDWidget, Warning, TEXT("delegate wasn't set"));
-			}
+			HealthComponent->OnDeath.AddUObject(this, &UPlayerHUDWidget::OnPawnDeath); 
 		}
 	}
+	else
+	{
+		UE_LOG(LogPlayerHUDWidget, Warning, TEXT("Health component is nullptr"));
+	}
+}
+
+void UPlayerHUDWidget::OnPawnDeath()
+{
+	//
+}
+
+bool UPlayerHUDWidget::GetAmmoPercent(float& AmmoPercent) const
+{
+	const auto WeaponComponent = GetOwningPlayerPawn() ? GetOwningPlayerPawn()->FindComponentByClass<UWeaponComponent>() : nullptr;
+	if (!WeaponComponent) return false;
+
+	return WeaponComponent->GetAmmoPercent(AmmoPercent);
 }
 
 void UPlayerHUDWidget::OnHealthChanged(float NewHealth)
@@ -52,24 +74,6 @@ void UPlayerHUDWidget::OnHealthChanged(float NewHealth)
 	if(NewHealth >= 0.0f)
 	{
 		HealthProgressBar->SetPercent(NewHealth / MaxHealth);
-	}
-}
-
-void UPlayerHUDWidget::OnAmmoChanged(int32 ClipAmmo, int32 CurrentAmmo)
-{
-	if(CurrentAmmo > ClipAmmo)
-	{
-		checkNoEntry();
-	}
-	if(ClipAmmo == 0)
-	{
-		UE_LOG(LogPlayerHUDWidget, Display, TEXT("needs reload"));
-		//reload animation
-	}
-	else
-	{
-		const float AmmoDelta = ClipAmmo == CurrentAmmo ? 0.0f : ClipAmmo / (ClipAmmo - CurrentAmmo);
-		UE_LOG(LogPlayerHUDWidget, Display, TEXT("Setting percent...: %f"), AmmoDelta);
-		AmmoProgressBar->SetPercent(AmmoDelta);
+		UE_LOG(LogPlayerHUDWidget, Display, TEXT("Percent set: %.2f"), NewHealth);
 	}
 }

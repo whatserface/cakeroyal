@@ -10,6 +10,7 @@
 
 class USkeletalMeshComponent;
 class AFirstPersonWeapon;
+class APlayerCharacter;
 
 UCLASS(Abstract, Blueprintable)
 class PETTEST_API AThirdPersonWeapon : public AActor
@@ -19,8 +20,6 @@ class PETTEST_API AThirdPersonWeapon : public AActor
 public:	
 	AThirdPersonWeapon();
 
-	FOnAmmoChangedSignature OnAmmoChanged;
-
 	UFUNCTION(Server, Unreliable)
 	void Reload();
 
@@ -29,10 +28,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	bool IsAmmoEmpty() const { return Bullets == 0; }
-	int32 GetBullets() const { return Bullets; }
+	void GetWeaponBullets(float& OutAmmoPercent) const;
 	FWeaponInfo GetWeaponInfo() const { return WeaponInfo; }
 
 protected:
+	UPROPERTY(Transient, Replicated)
+	APlayerCharacter* MyPawn;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* WeaponMesh;
 
@@ -56,7 +58,7 @@ protected:
 	void LogAmmo();
 
 private:
-
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, Transient)
 	int32 Bullets;
 };
+
