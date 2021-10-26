@@ -7,6 +7,8 @@
 #include "PlayerHUDWidget.generated.h"
 
 class UProgressBar;
+class UCanvasPanel;
+class UDeathWidget;
 
 UCLASS()
 class PETTEST_API UPlayerHUDWidget : public UUserWidget
@@ -19,19 +21,44 @@ public:
 
 protected:
 	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* MainHUD;
+
+	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthProgressBar;
 
 	UPROPERTY(meta = (BindWidget))
+	UProgressBar* ArmorProgressBar;
+
+	UPROPERTY(meta = (BindWidget))
 	UProgressBar* AmmoProgressBar;
+
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* ReloadAnimation;
+
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* ArmorPickupAnimation;
+
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* HealthPickupAnimation;
+
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* HealthReduceAnimation;
+
+	UPROPERTY(meta = (BindWidget))
+	UDeathWidget* DeathWidget;
 
 	virtual void NativeOnInitialized() override;
 
 private:
 	void OnNewPawn(APawn* NewPawn);
 	void OnHealthChanged(float NewHealth);
+	void OnArmorChanged(float NewArmor);
 	void OnPawnDeath();
-	//void OnAmmoChanged(); по-любому понадобиться, когда придётся менять видимость виджету/играть анимацию какую-нибудь
+	void OnReload();
 
-	float CurrentHealth;
+	float MaxArmor;
 	float MaxHealth;
+	
+	float LastHP;
+	bool bHasJustSpawned = true;
 };

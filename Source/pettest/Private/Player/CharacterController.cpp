@@ -2,19 +2,15 @@
 
 
 #include "Player/CharacterController.h"
+#include "Player/CharacterCameraManager.h"
 #include "Components/RespawnComponent.h"
 #include "GameFramework/SpectatorPawn.h"
 #include "GameFramework/PlayerState.h"
 
 ACharacterController::ACharacterController()
 {
+	PlayerCameraManagerClass = ACharacterCameraManager::StaticClass();
 	RespawnComponent = CreateDefaultSubobject<URespawnComponent>("RespawnComponent");
-	OnNewPawn.AddUObject(this, &ACharacterController::FireDelegate);
-}
-
-void ACharacterController::FireDelegate_Implementation(APawn* NewPawn)
-{
-	OnClientNewPawn.Broadcast(NewPawn);
 }
 
 void ACharacterController::OnRep_Pawn()

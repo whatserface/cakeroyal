@@ -7,6 +7,8 @@
 #include "Components/ActorComponent.h"
 #include "HealthComponent.generated.h"
 
+class APlayerCharacter;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PETTEST_API UHealthComponent : public UActorComponent
 {
@@ -16,20 +18,36 @@ public:
 	UHealthComponent();
 
 	FOnDeath OnDeath;
-	FOnHealthChangedSignature OnHealthChanged;
+	FOnShieldChangedSignature OnHealthChanged;
+	FOnShieldChangedSignature OnArmorChanged;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	bool IsDead() const { return FMath::IsNearlyZero(Health); }
-	bool IsHealthFull() const { return Health == MaxHealth; }
 	float GetMaxHealth() const { return MaxHealth; }
+	float GetMaxArmor() const { return MaxArmor; }
 
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	bool IsHealthFull() const { return Health == MaxHealth; }
+	
+	UFUNCTION(BlueprintCallable, Category  = "Armor")
+	bool IsArmorFull() const { return Armor == MaxArmor; }
+	
 	UFUNCTION(BlueprintCallable)
 	void TryToAddHP(float HP);
 
+	UFUNCTION(BlueprintCallable)
+	void TryToAddArmor(float AP);
+
 protected:
+	UPROPERTY(Transient, Replicated)
+	class APlayerCharacter* MyPawn;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "0"))
 	float MaxHealth = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Armor", meta = (ClampMin = "0"))
+	float MaxArmor = 30.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Heal", meta = (ClampMin = "0"))
 	float HealUpdateTime = 0.3f;
@@ -44,16 +62,20 @@ protected:
 	float HealThreshold = 20.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Heal", meta = (ClampMin = "0"))
-	float HPToAdd = 20.0f;
+	float HPToHeal = 20.0f;
 
 	virtual void BeginPlay() override;
 
 private:
+	FTimerHandle HealTimer;
+
 	UPROPERTY(Replicated)
 	float Health = 0.0f;
 
+	UPROPERTY(Replicated)
+	float Armor = 0.0f;
+
 	float FiniteHP;
-	FTimerHandle HealTimer;
 
 	UFUNCTION(Server, Reliable)
 	void OnTakeAnyDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
@@ -61,7 +83,14 @@ private:
 	UFUNCTION(Client, Unreliable, WithValidation)
 	void Client_InvokeOnHealthChanged(float NewHealth);
 
+	UFUNCTION(Client, Unreliable, WithValidation)
+	void Client_InvokeOnArmorChanged(float NewArmor);
+
+	UFUNCTION(Client, Unreliable, WithValidation)
+	void Client_InvokeOnDeath();
+
 	void Heal();
 	void SetHealth(float NewHealth);
+	void SetArmor(float NewArmor);
 	void Killed(AController* KilledBy);
 };

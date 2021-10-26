@@ -20,21 +20,20 @@ class PETTEST_API AThirdPersonWeapon : public AActor
 public:	
 	AThirdPersonWeapon();
 
-	UFUNCTION(Server, Unreliable)
+	FOnReload OnReload;
+
 	void Reload();
 
 	virtual void StartFire();
 	virtual void StopFire();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	bool CanReload() const { return Bullets != WeaponInfo.Bullets; }
 	bool IsAmmoEmpty() const { return Bullets == 0; }
 	void GetWeaponBullets(float& OutAmmoPercent) const;
 	FWeaponInfo GetWeaponInfo() const { return WeaponInfo; }
 
 protected:
-	UPROPERTY(Transient, Replicated)
-	APlayerCharacter* MyPawn;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* WeaponMesh;
 
@@ -51,8 +50,8 @@ protected:
 	FWeaponInfo WeaponInfo;
 
 	virtual void BeginPlay() override;
-	virtual void ReduceAmmo();
-	virtual void MakeShot();
+	void ReduceAmmo();
+	virtual void MakeShot() { return; }
 	virtual bool CanShoot();
 	
 	void LogAmmo();

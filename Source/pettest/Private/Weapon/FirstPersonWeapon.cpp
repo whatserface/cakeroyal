@@ -9,7 +9,9 @@ AFirstPersonWeapon::AFirstPersonWeapon()
 	PrimaryActorTick.bCanEverTick = false;
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>("WeaponMesh");
 	WeaponMesh->bOnlyOwnerSee = true;
+	WeaponMesh->SetCastShadow(false);
 	SetRootComponent(WeaponMesh);
+
 	bReplicates = false;
 }
 

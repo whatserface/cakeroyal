@@ -21,7 +21,6 @@ class PETTEST_API APlayerCharacter : public ACharacter
 public:
 	APlayerCharacter(const FObjectInitializer& ObjInit);
 
-	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -30,10 +29,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	float GetMovementDirection() const;
-
+	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
 	void PlayAnimMontageFPP(UAnimMontage* MontageToPlay);
 
+	void SetCanRun(bool CanRun);
+	void OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation);
 	USkeletalMeshComponent* GetInnerMesh() { return InnerMesh; }
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
@@ -61,6 +62,9 @@ private:
 
 	UPROPERTY(Replicated)
 	bool IsMovingForward = false;
+	
+	UPROPERTY(Replicated)
+	bool bCanRun = true;
 
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void SetbIsMovingForward(bool Value);
@@ -75,4 +79,6 @@ private:
 
 	void Run();
 	void StopRun();
+	FRotator DefaultFPPRotation;
+	FVector DefaultFPPLocation;
 };

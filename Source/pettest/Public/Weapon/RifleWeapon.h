@@ -18,13 +18,16 @@ class PETTEST_API ARifleWeapon : public AThirdPersonWeapon
 public:	
 	ARifleWeapon();
 
-	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	virtual void StartFire() override;
-
-	UFUNCTION(Server, Unreliable, Category = "Shooting")
 	virtual void StopFire() override;
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Shooting")
+	float BulletSpreadDefault = 1.5f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Shooting")
+	float BulletSpreadAloft = 11.5f;
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Shooting")
 	void Recoil(APawn* ApplyTo);
 

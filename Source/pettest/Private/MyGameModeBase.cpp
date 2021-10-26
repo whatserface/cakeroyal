@@ -35,11 +35,16 @@ void AMyGameModeBase::Killed(AController* KillerController, AController* VictimC
 	StartRespawn(VictimController);
 }
 
-void AMyGameModeBase::RespawnRequest(AController* Controller)
+bool AMyGameModeBase::RespawnRequest(AController* Controller)
 {
-	if (Controller->GetPawn())
+	if (!Controller) return false;
+
+	if (APawn* Pawn = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, FindPlayerStart(Controller)->GetTransform()))
 	{
-		Controller->GetPawn()->Reset();
+		Controller->Possess(Pawn);
+		return true;
 	}
-	RestartPlayer(Controller);
+
+	UE_LOG(LogMyGameModeBase, Warning, TEXT("Pawn couldn't be spawn while respawning"));
+	return false;
 }

@@ -6,13 +6,14 @@
 #include "Weapon/RifleWeapon.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
-
+#include "ReloadAnimNotify.h"
+ 
 DEFINE_LOG_CATEGORY_STATIC(LogWeaponComponent, All, All)
 
 UWeaponComponent::UWeaponComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
-}
+} 
 
 void UWeaponComponent::BeginPlay()
 {
@@ -22,8 +23,13 @@ void UWeaponComponent::BeginPlay()
     {
         MyPawn = Cast<APlayerCharacter>(GetOwner());
         check(MyPawn);
+        SpawnTPPWeapon();
+        InitAnimations();
     }
-    SpawnTPPWeapon();
+    if (TPPWeapon)
+    {
+        TPPWeapon->OnReload.BindUFunction(this, TEXT("Reload"));
+    }
 }
 
 void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -56,13 +62,13 @@ void UWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     
     DOREPLIFETIME(UWeaponComponent, MyPawn);
     DOREPLIFETIME(UWeaponComponent, TPPWeapon);
+    DOREPLIFETIME_CONDITION(UWeaponComponent, bReloadAnimInProgress, COND_OwnerOnly);
 }
 
-void UWeaponComponent::SpawnTPPWeapon_Implementation()
+void UWeaponComponent::SpawnTPPWeapon()
 {
-    if (!GetWorld() || !MyPawn || !MyPawn->HasAuthority()) return;
+    if (!GetWorld() || GetOwnerRole() != ROLE_Authority || !MyPawn) return;
 
-    UE_LOG(LogWeaponComponent, Display, TEXT("Spawning TPP Weapon"));
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = MyPawn;
     SpawnParams.Instigator = MyPawn;
@@ -76,7 +82,7 @@ void UWeaponComponent::SpawnTPPWeapon_Implementation()
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
     TPPWeapon->AttachToComponent(MyPawn->GetMesh(), TransformRules, WeaponSocketName);
     FTimerHandle TestTimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.5f, false);
+    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.3f, false);
 }
  
 void UWeaponComponent::SpawnFPPWeapon_Implementation()
@@ -85,12 +91,11 @@ void UWeaponComponent::SpawnFPPWeapon_Implementation()
         UE_LOG(LogWeaponComponent, Warning, TEXT("Pawn isn't locally controlled"));
         return;
     }
-    UE_LOG(LogWeaponComponent, Display, TEXT("Spawning FPP Weapon"));
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = MyPawn;
     SpawnParams.Instigator = MyPawn;
     const auto FWeapon = GetWorld()->SpawnActor<AFirstPersonWeapon>(TPPWeapon->GetWeaponInfo().FPPWeaponClass, SpawnParams);
-    if (!FWeapon) 
+    if (!FWeapon)
     {
         UE_LOG(LogWeaponComponent, Warning, TEXT("FPP Weapon Actor couldn't be spawned"));
         return;
@@ -98,21 +103,21 @@ void UWeaponComponent::SpawnFPPWeapon_Implementation()
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
     FWeapon->AttachToComponent(MyPawn->GetInnerMesh(), TransformRules, WeaponSocketName);
     FPPWeapon = FWeapon;
-    UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon spawn was succeeded"));
 }
 
-void UWeaponComponent::StartFire()
+void UWeaponComponent::StartFire_Implementation()
 {
     if (!TPPWeapon || !MyPawn)
-    { 
+    {
         UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon or pawn's pointer is null"));
         return;
     }
-
+    if (bReloadAnimInProgress) return;
+    
     TPPWeapon->StartFire();
 }
 
-void UWeaponComponent::StopFire()
+void UWeaponComponent::StopFire_Implementation()
 {
     if (!TPPWeapon)
     {
@@ -125,23 +130,39 @@ void UWeaponComponent::StopFire()
 
 void UWeaponComponent::Reload_Implementation()
 {
-    if(!TPPWeapon)
+    if (!TPPWeapon)
     {
         UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon's pointer is null"));
         return;
     }
-    
+    if (!CanReload() || !MyPawn || MyPawn->IsPendingKill()) return;
+
+    MyPawn->SetCanRun(false);
+    bReloadAnimInProgress = true;
     PlayReloadAnim();
-    TPPWeapon->Reload();
+}
+
+bool UWeaponComponent::CanShoot() const
+{
+    return TPPWeapon && !TPPWeapon->IsAmmoEmpty() && !bReloadAnimInProgress && MyPawn && !MyPawn->IsRunning();
 }
 
 void UWeaponComponent::PlayReloadAnim_Implementation()
 {
     if (!IsRunningDedicatedServer() && MyPawn)
     {
-        if (MyPawn->IsLocallyControlled())
+        if (!ReloadMontageFPP || !ReloadMontageTPP)
         {
+            UE_LOG(LogWeaponComponent, Warning, TEXT("One of reload montage assets wasn't set"));
+            return;
+        }
+        if (MyPawn->IsLocallyControlled() && MyPawn->GetInnerMesh() && MyPawn->GetInnerMesh()->GetAnimInstance())
+        {
+            OnReload.Execute();
             MyPawn->PlayAnimMontageFPP(ReloadMontageFPP);
+            UE_LOG(LogTemp, Display, TEXT("TPP WEAPON: %s"), *TPPWeapon->GetName());
+            //const float length = MyPawn->GetInnerMesh()->GetAnimInstance()->Montage_Play(ReloadMontageFPP, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, false);
+            //UE_LOG(LogTemp, Display, TEXT("Playing animation for %.2f seconds"), length);
         }
         else
         {
@@ -150,15 +171,57 @@ void UWeaponComponent::PlayReloadAnim_Implementation()
     }
 }
 
-void UWeaponComponent::PlayAnimMontage(UAnimMontage* Animation)
-{
-    //
-}
-
 bool UWeaponComponent::GetAmmoPercent(float& OutAmmoPercent)
 {
     if (!TPPWeapon || !MyPawn || !MyPawn->IsLocallyControlled()) return false;
 
     TPPWeapon->GetWeaponBullets(OutAmmoPercent);
     return true;
+}
+
+void UWeaponComponent::InitAnimations()
+{
+    if (!ReloadMontageFPP || !ReloadMontageTPP) return;
+
+    auto NotifyEvents = ReloadMontageFPP->Notifies;
+    for (FAnimNotifyEvent NotifyEvent : NotifyEvents)
+    {
+        auto ReloadFinishedNotify = Cast<UReloadAnimNotify>(NotifyEvent.Notify);
+        if (ReloadFinishedNotify)
+        {
+            ReloadFinishedNotify->OnNotified.AddUObject(this, &UWeaponComponent::OnReloadFinished);
+            break;
+        }
+    }
+    NotifyEvents = ReloadMontageTPP->Notifies;
+    for (FAnimNotifyEvent NotifyEvent : NotifyEvents)
+    {
+        auto ReloadFinishedNotify = Cast<UReloadAnimNotify>(NotifyEvent.Notify);
+        if (ReloadFinishedNotify)
+        {
+            ReloadFinishedNotify->OnNotified.AddUObject(this, &UWeaponComponent::OnReloadFinished);
+            break;
+        }
+    }
+}
+
+void UWeaponComponent::OnReloadFinished(USkeletalMeshComponent* MeshComp)
+{
+    UE_LOG(LogTemp, Display, TEXT("Almost reloaded!"));
+    if (GetOwnerRole() != ROLE_Authority  || !TPPWeapon || !MyPawn || !(MeshComp == MyPawn->GetInnerMesh() || MeshComp == MyPawn->GetMesh())) return;
+
+    MyPawn->SetCanRun(true);
+    UE_LOG(LogTemp, Display, TEXT("Reload finished"));
+    TPPWeapon->Reload();
+    bReloadAnimInProgress = false;
+}
+
+bool UWeaponComponent::CanReload() const
+{
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        UE_LOG(LogWeaponComponent, Warning, TEXT("Running CanReload method not on server"));
+        return false;
+    }
+    return !bReloadAnimInProgress && TPPWeapon && TPPWeapon->CanReload();
 }

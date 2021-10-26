@@ -14,7 +14,7 @@ public:
 	AMyGameModeBase();
 	
 	void Killed(AController* KillerController, AController* VictimController);
-	void RespawnRequest(AController* Controller);
+	bool RespawnRequest(AController* Controller);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Spawn")

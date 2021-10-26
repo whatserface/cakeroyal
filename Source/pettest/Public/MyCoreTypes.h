@@ -3,7 +3,7 @@
 #include "MyCoreTypes.generated.h"
 
 //weapon
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
+DECLARE_DELEGATE(FOnReload);
 
 class AFirstPersonWeapon;
 
@@ -20,5 +20,9 @@ struct FWeaponInfo
 };
 
 //health
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnHealthChangedSignature, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnShieldChangedSignature, float);
 DECLARE_MULTICAST_DELEGATE(FOnDeath);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPawnRespawn, APawn*);
+
+//animation
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnNotifiedSignature, USkeletalMeshComponent*);

@@ -15,20 +15,22 @@ void URespawnComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(URespawnComponent, RespawnCountDown);
+	DOREPLIFETIME_CONDITION(URespawnComponent, bIsRespawnInProgress, COND_OwnerOnly);
 }
 
-void URespawnComponent::Respawn_Implementation(int32 RespawnTime)
+void URespawnComponent::Respawn(int32 RespawnTime)
 {
-	if (!GetWorld()) return;
+	if (GetOwnerRole() != ROLE_Authority || !GetWorld()) return;
 
 	RespawnCountDown = RespawnTime;
 	GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &URespawnComponent::RespawnTimerUpdate, 1.0f, true);
+	bIsRespawnInProgress = true;
 }
 
 void URespawnComponent::RespawnTimerUpdate()
 {
 	UE_LOG(LogTemp, Display, TEXT("updaTE. RespawnCountDown: %i"), RespawnCountDown);
-	if(GetOwnerRole() == ROLE_Authority && --RespawnCountDown == 0)
+	if (GetOwnerRole() == ROLE_Authority && --RespawnCountDown == 0)
 	{
 		if (!GetWorld()) return;
 
@@ -36,6 +38,19 @@ void URespawnComponent::RespawnTimerUpdate()
 		const auto GameMode = GetWorld()->GetAuthGameMode<AMyGameModeBase>();
 		if (!GameMode) return;
 
-		GameMode->RespawnRequest(Cast<AController>(GetOwner()));
+		if (GameMode->RespawnRequest(Cast<AController>(GetOwner())))
+		{
+			FTimerHandle TempHandle;
+			GetWorld()->GetTimerManager().SetTimer(TempHandle, this, &URespawnComponent::ProcessOnPawnRespawn, 0.2f, false);
+			bIsRespawnInProgress = false;
+		}
 	}
+}
+
+void URespawnComponent::ProcessOnPawnRespawn_Implementation()
+{
+	const auto Controller = Cast<AController>(GetOwner());
+	if (!Controller || !Controller->GetPawn()) return;
+
+	OnPawnRespawn.Broadcast(Controller->GetPawn());
 }

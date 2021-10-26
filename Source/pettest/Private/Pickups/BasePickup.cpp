@@ -27,7 +27,6 @@ ABasePickup::ABasePickup()
 void ABasePickup::BeginPlay()
 {
 	Super::BeginPlay();
-	InitialLocation = PickupMesh->GetRelativeLocation();
 	GenerateRotationYaw();
 }
 
@@ -41,13 +40,11 @@ void ABasePickup::Tick(float DeltaTime)
 
 void ABasePickup::HandleMovement()
 {
-	if (!GetWorld()) return;
-
 	PickupMesh->AddLocalRotation(FRotator(0.0f, RotationYaw, 0.0f));
 
 	FVector CurrentLocation = PickupMesh->GetRelativeLocation();
-	CurrentLocation.Z = InitialLocation.Z + Amplitude * FMath::Sin(Frequency * GetWorld()->GetTimeSeconds());
-	PickupMesh->AddLocalOffset(CurrentLocation);
+	CurrentLocation.Z = Amplitude * FMath::Sin(Frequency * GetWorld()->GetTimeSeconds());
+	PickupMesh->SetRelativeLocation(CurrentLocation);
 }
 
 void ABasePickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -56,7 +53,6 @@ void ABasePickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
 	DOREPLIFETIME(ABasePickup, bIsActive);
 	DOREPLIFETIME_CONDITION(ABasePickup, RotationYaw, COND_InitialOnly);
-	DOREPLIFETIME_CONDITION(ABasePickup, InitialLocation, COND_InitialOnly);
 }
 
 void ABasePickup::PickupWasTaken(AActor* PickupActor) 
@@ -76,6 +72,11 @@ void ABasePickup::PickupWasTaken(AActor* PickupActor)
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, TimerDel, RespawnTime, false);
 }
 
+void ABasePickup::GivePickupTo_Implementation(AActor* PickupActor)
+{
+	UE_LOG(LogTemp, Display, TEXT("Overlapped pickup doesn't have implementation of Give Pickup To method"));
+}
+
 void ABasePickup::ChangeBehaviour(bool IsActive)
 {
 	if (!HasAuthority()) return;
@@ -84,8 +85,6 @@ void ABasePickup::ChangeBehaviour(bool IsActive)
 	SetActorHiddenInGame(!IsActive);
 	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, IsActive ? ECR_Overlap : ECR_Ignore);
 }
-
-void ABasePickup::GivePickupTo(AActor* PickupActor) {}
 
 void ABasePickup::GenerateRotationYaw() 
 {

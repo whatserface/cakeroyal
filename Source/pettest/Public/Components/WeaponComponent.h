@@ -7,7 +7,6 @@
 #include "Components/ActorComponent.h"
 #include "WeaponComponent.generated.h"
 
-
 class AThirdPersonWeapon;
 class AFirstPersonWeapon;
 class APlayerCharacter;
@@ -20,7 +19,14 @@ class PETTEST_API UWeaponComponent : public UActorComponent
 public:
 	UWeaponComponent();
 
+	FOnReload OnReload;
+
+	bool CanShoot() const;
+
+	UFUNCTION(Server, Unreliable)
 	void StartFire();
+
+	UFUNCTION(Server, Unreliable)
 	void StopFire();
 
 	bool GetAmmoPercent(float& OutAmmoPercent);
@@ -58,7 +64,9 @@ private:
 	
 	AFirstPersonWeapon* FPPWeapon = nullptr;
 
-	UFUNCTION(Server, Reliable, Category = "Shooting")
+	UPROPERTY(Replicated)
+	bool bReloadAnimInProgress = false;
+
 	void SpawnTPPWeapon();
 	
 	UFUNCTION(Client, Unreliable, Category = "Shooting")
@@ -66,6 +74,8 @@ private:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void PlayReloadAnim();
-
-	void PlayAnimMontage(UAnimMontage* Animation);
+	
+	bool CanReload() const;
+	void OnReloadFinished(USkeletalMeshComponent* MeshComp);
+	void InitAnimations();
 };

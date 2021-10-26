@@ -26,13 +26,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Start Spectating Player Controller")
 	void StartPlaying();
-
-	FPawnChangedSignature OnClientNewPawn;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
     class URespawnComponent* RespawnComponent;
-
-private:
-	UFUNCTION(Client, Unreliable)
-	void FireDelegate(APawn* NewPawn);
 };

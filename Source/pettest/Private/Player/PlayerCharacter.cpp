@@ -44,12 +44,6 @@ void APlayerCharacter::BeginPlay()
 	HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
 }
 
-void APlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -72,6 +66,7 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 	DOREPLIFETIME(APlayerCharacter, IsMovingForward);
 	DOREPLIFETIME(APlayerCharacter, WantsToRun);
+	DOREPLIFETIME(APlayerCharacter, bCanRun);
 }
 
 void APlayerCharacter::MoveForward(float Value)
@@ -110,7 +105,7 @@ void APlayerCharacter::LookUp(float Value)
 
 bool APlayerCharacter::IsRunning() const
 {
-	return IsMovingForward && WantsToRun && !GetVelocity().IsZero();
+	return bCanRun && IsMovingForward && WantsToRun && !GetVelocity().IsZero();
 }
 
 void APlayerCharacter::Run()
@@ -125,12 +120,17 @@ void APlayerCharacter::StopRun()
 
 void APlayerCharacter::SetbIsMovingForward_Implementation(bool Value)
 {
-	if (HasAuthority()) IsMovingForward = Value;
+	IsMovingForward = Value;
+}
+
+void APlayerCharacter::SetCanRun(bool CanRun)
+{
+	if (HasAuthority()) bCanRun = CanRun;
 }
 
 void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 {
-	if (HasAuthority()) WantsToRun = Value;
+	WantsToRun = Value;
 }
 
 void APlayerCharacter::Server_OnDeath_Implementation()
@@ -169,4 +169,21 @@ float APlayerCharacter::GetMovementDirection() const
 	const auto Degrees = FMath::RadiansToDegrees(AngleBetween);
 	const auto CrossProduct = FVector::CrossProduct(GetActorForwardVector(), VelocityNormal);
 	return CrossProduct.IsZero() ? Degrees : Degrees * FMath::Sign(CrossProduct.Z);
+}
+
+void APlayerCharacter::OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation)
+{
+	USkeletalMeshComponent* DefMesh1P = Cast<USkeletalMeshComponent>(GetClass()->GetDefaultSubobjectByName(TEXT("FPPMesh")));
+	const FMatrix DefMesh = FRotationTranslationMatrix(DefMesh1P->GetRelativeRotation(), DefMesh1P->GetRelativeLocation());
+	const FMatrix LocalToWorld = ActorToWorld().ToMatrixWithScale();
+
+	const FRotator RotCameraPitch(CameraRotation.Pitch, 0.0f, 0.0f);
+	const FRotator RotCameraYaw(0.0f, CameraRotation.Yaw, 0.0f);
+
+	const FMatrix LeveledCameraLS = FRotationTranslationMatrix(RotCameraYaw, CameraLocation) * LocalToWorld.Inverse();
+	const FMatrix PitchedCameraLS = FRotationMatrix(RotCameraPitch) * LeveledCameraLS;
+	const FMatrix MeshRelativeToCamera = DefMesh * LeveledCameraLS.Inverse();
+	const FMatrix PitchedMesh = MeshRelativeToCamera * PitchedCameraLS;
+
+	InnerMesh->SetRelativeLocationAndRotation(PitchedMesh.GetOrigin(), PitchedMesh.Rotator());
 }

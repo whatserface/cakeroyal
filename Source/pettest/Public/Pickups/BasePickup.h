@@ -36,13 +36,13 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
 	void PickupWasTaken(AActor* PickupActor);
 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Pickup")
+	void GivePickupTo(AActor* PickupActor);
+
 	virtual void BeginPlay() override;
 
 private:
 	FTimerHandle RespawnTimerHandle;
-
-	UPROPERTY(Replicated)
-	FVector InitialLocation;
 
 	UPROPERTY(Replicated)
 	float RotationYaw = 0.0f;
@@ -52,8 +52,7 @@ private:
 
 	UFUNCTION()
 	void ChangeBehaviour(bool IsActive);
-
+	
 	void HandleMovement();
-	virtual void GivePickupTo(AActor* PickupActor);
 	void GenerateRotationYaw();
 };
