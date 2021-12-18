@@ -15,13 +15,11 @@ class PETTEST_API URespawnComponent : public UActorComponent
 public:	
 	URespawnComponent();
 
-
 	FOnPawnRespawn OnPawnRespawn;
 
 	void Respawn(int32 RespawnTime);
 
-	int32 GetRespawnCountDown() const { return RespawnCountDown; }
-	bool IsRespawnInProgress() const { return bIsRespawnInProgress; }
+	int32 GetRespawnCountDown() const;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:

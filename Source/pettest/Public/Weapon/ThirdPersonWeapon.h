@@ -11,6 +11,9 @@
 class USkeletalMeshComponent;
 class AFirstPersonWeapon;
 class APlayerCharacter;
+class UNiagaraComponent;
+class UNiagaraSystem;
+class UWeaponComponent;
 
 UCLASS(Abstract, Blueprintable)
 class PETTEST_API AThirdPersonWeapon : public AActor
@@ -20,7 +23,8 @@ class PETTEST_API AThirdPersonWeapon : public AActor
 public:	
 	AThirdPersonWeapon();
 
-	FOnReload OnReload;
+	FOnAmmoChanged OnAmmoChanged;
+	FOnTraceAppeared OnTraceAppeared; //required for rifle, though it's really shouldn't be here, but the design of project is just kinda fucked up, so yeah...
 
 	void Reload();
 
@@ -30,13 +34,12 @@ public:
 
 	bool CanReload() const { return Bullets != WeaponInfo.Bullets; }
 	bool IsAmmoEmpty() const { return Bullets == 0; }
-	void GetWeaponBullets(float& OutAmmoPercent) const;
 	FWeaponInfo GetWeaponInfo() const { return WeaponInfo; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* WeaponMesh;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0", ClampMax = "1000"))
 	float Damage = 0.0f;
 
@@ -48,6 +51,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FWeaponInfo WeaponInfo;
+
+	UPROPERTY(Replicated, Transient)
+	UWeaponComponent* WeaponComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (Tooltip = "Keep it in sync with first person weapon!"))
+	FName MuzzleSocketName = "MuzzleFlashSocket";
+
+	UFUNCTION(Client, Unreliable, WithValidation)
+	void Client_InvokeAmmoChanged(int32 Ammo);
 
 	virtual void BeginPlay() override;
 	void ReduceAmmo();

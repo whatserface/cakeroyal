@@ -3,7 +3,8 @@
 #include "MyCoreTypes.generated.h"
 
 //weapon
-DECLARE_DELEGATE(FOnReload);
+DECLARE_DELEGATE_OneParam(FOnAmmoChanged, int32);
+DECLARE_DELEGATE_OneParam(FOnTraceAppeared, FVector);
 
 class AFirstPersonWeapon;
 

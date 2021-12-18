@@ -40,7 +40,7 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 		UE_LOG(LogPlayerHUDWidget, Warning, TEXT("One of components is nullptr"));
 		return;
 	}
-	if (!HealthComponent->OnHealthChanged.IsBoundToObject(this)) 
+	if (!HealthComponent->OnHealthChanged.IsBoundToObject(this))
 	{
 		HealthComponent->OnHealthChanged.AddUObject(this, &UPlayerHUDWidget::OnHealthChanged);
 		HealthComponent->OnArmorChanged.AddUObject(this, &UPlayerHUDWidget::OnArmorChanged);
@@ -53,13 +53,19 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 		OnHealthChanged(MaxHealth);
 		UE_LOG(LogPlayerHUDWidget, Display, TEXT("Health Changed"));
 	}
-	if (!HealthComponent->OnDeath.IsBoundToObject(this)) 
+	if (!HealthComponent->OnDeath.IsBoundToObject(this))
 	{
-		HealthComponent->OnDeath.AddUObject(this, &UPlayerHUDWidget::OnPawnDeath); 
+		HealthComponent->OnDeath.AddUObject(this, &UPlayerHUDWidget::OnPawnDeath);
 	}
-	if (!WeaponComponent->OnReload.IsBoundToObject(this))
+	if (!WeaponComponent->OnAmmoChanged.IsBoundToObject(this))
 	{
-		WeaponComponent->OnReload.BindUObject(this, &UPlayerHUDWidget::OnReload);
+		WeaponComponent->OnAmmoChanged.BindUObject(this, &UPlayerHUDWidget::OnAmmoChanged);
+		UE_LOG(LogTemp, Display, TEXT("Binded to ammo changed delegate, running %s"), NewPawn->IsLocallyControlled() ? TEXT("locally") : TEXT("remotely"));
+		if (MaxAmmo == -1) {
+			FTimerDelegate WeaponDelegate;
+			WeaponDelegate.BindUFunction(this, TEXT("WriteFromWeaponComponent"), NewPawn);
+			GetWorld()->GetTimerManager().SetTimer(WeaponTimer, WeaponDelegate, 0.1f, true);
+		}
 	}
 }
 
@@ -69,17 +75,16 @@ void UPlayerHUDWidget::OnPawnDeath()
 	MainHUD->SetVisibility(ESlateVisibility::Collapsed);
 	bHasJustSpawned = true;
 	DeathWidget->SetVisibility(ESlateVisibility::Visible);
+	AmmoProgressBar->SetPercent(0.0f);
 }
 
-bool UPlayerHUDWidget::GetAmmoPercent(float& AmmoPercent) const
+void UPlayerHUDWidget::WriteFromWeaponComponent(APawn* Pawn)
 {
-	const auto WeaponComponent = GetOwningPlayerPawn() ? GetOwningPlayerPawn()->FindComponentByClass<UWeaponComponent>() : nullptr;
-	if (!WeaponComponent) {
-		UE_LOG(LogPlayerHUDWidget, Warning, TEXT("Weapon component is nullptr for some strange reason"));
-		return false;
-	}
+	const auto WeaponComponent = Pawn ? Pawn->FindComponentByClass<UWeaponComponent>() : nullptr;
+	if (!WeaponComponent) return;
 
-	return WeaponComponent->GetAmmoPercent(AmmoPercent);
+	MaxAmmo = WeaponComponent->GetMaxAmmo();
+	if (MaxAmmo != 0) GetWorld()->GetTimerManager().ClearTimer(WeaponTimer);
 }
 
 void UPlayerHUDWidget::OnHealthChanged(float NewHealth)
@@ -117,7 +122,16 @@ void UPlayerHUDWidget::OnArmorChanged(float NewArmor)
 	ArmorProgressBar->SetPercent(NewArmor / MaxArmor);
 }
 
-void UPlayerHUDWidget::OnReload()
+void UPlayerHUDWidget::OnAmmoChanged(int32 NewAmmo)
 {
-	//if (!IsAnimationPlaying(ReloadAnimation)) PlayAnimation(ReloadAnimation);
+	if (NewAmmo < 0) return;
+
+	UE_LOG(LogTemp, Display, TEXT("AMmo: %i"), NewAmmo);
+
+	const float AmmoPercent = NewAmmo != 0 ? (float)(MaxAmmo - NewAmmo) / (float)(MaxAmmo) : 1.0f;
+	AmmoProgressBar->SetPercent(AmmoPercent);
+	if (NewAmmo == 0 && !IsAnimationPlaying(ReloadAnimation))
+	{
+		PlayAnimation(ReloadAnimation);
+	}
 }

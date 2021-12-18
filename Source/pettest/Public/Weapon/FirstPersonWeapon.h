@@ -22,4 +22,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Mesh")
 	USkeletalMeshComponent* WeaponMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (Tooltip = "Keep it in sync with third person weapon!"))
+	FName MuzzleSocketName = "MuzzleFlashSocket";
 };

@@ -9,8 +9,10 @@
 
 ACharacterController::ACharacterController()
 {
+	bReplicates = true;
 	PlayerCameraManagerClass = ACharacterCameraManager::StaticClass();
 	RespawnComponent = CreateDefaultSubobject<URespawnComponent>("RespawnComponent");
+	RespawnComponent->SetIsReplicated(true);
 }
 
 void ACharacterController::OnRep_Pawn()

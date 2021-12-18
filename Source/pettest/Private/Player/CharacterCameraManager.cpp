@@ -3,6 +3,7 @@
 
 #include "Player/CharacterCameraManager.h"
 #include "Player/PlayerCharacter.h"
+#include "Components/RespawnComponent.h"
 
 ACharacterCameraManager::ACharacterCameraManager()
 {
@@ -14,19 +15,34 @@ ACharacterCameraManager::ACharacterCameraManager()
 void ACharacterCameraManager::BeginPlay()
 {
 	Super::BeginPlay();
-	MyPawn = PCOwner ? Cast<APlayerCharacter>(PCOwner->GetPawn()) : nullptr;
+	UpdatePawn(nullptr);
+	if (!PCOwner) return;
+	const auto RespawnComponent = PCOwner->FindComponentByClass<URespawnComponent>();
+	if (RespawnComponent) RespawnComponent->OnPawnRespawn.AddUObject(this, &ACharacterCameraManager::UpdatePawn);
 }
 
 void ACharacterCameraManager::UpdateCamera(float DeltaTime)
 {
 	Super::UpdateCamera(DeltaTime);
-	if (!PCOwner || !MyPawn || MyPawn->IsPendingKill()) return;
 
-	if (PCOwner && !MyPawn)
+	if (!PCOwner || (MyPawn && MyPawn->IsPendingKill()))
 	{
-		MyPawn = PCOwner ? Cast<APlayerCharacter>(PCOwner->GetPawn()) : nullptr;
 		return;
 	}
-	
+	if (PCOwner && !MyPawn)
+	{
+		UpdatePawn(nullptr);
+		return;
+	}
 	MyPawn->OnCameraUpdate(GetCameraLocation(), GetCameraRotation());
+}
+
+void ACharacterCameraManager::UpdatePawn(APawn* NewPawn)
+{
+	if (NewPawn)
+	{
+		MyPawn = Cast<APlayerCharacter>(NewPawn);
+		return;
+	}
+	MyPawn = PCOwner ? Cast<APlayerCharacter>(PCOwner->GetPawn()) : nullptr;
 }

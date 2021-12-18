@@ -2,13 +2,34 @@
 
 
 #include "Components/MyCharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/PlayerCharacter.h"
 
 UMyCharacterMovementComponent::UMyCharacterMovementComponent(const FObjectInitializer& ObjInit) : Super(ObjInit) {}
 
+void UMyCharacterMovementComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	OwningPlayer = Cast<APlayerCharacter>(GetOwner());
+}
+
 float UMyCharacterMovementComponent::GetMaxSpeed() const
 {
 	const float MaxSpeed = Super::GetMaxSpeed();
-	const APlayerCharacter* Player = Cast<APlayerCharacter>(GetOwner());
-	return Player && Player->IsRunning() ? MaxSpeed * RunModifier : MaxSpeed;
+	return OwningPlayer && OwningPlayer->IsRunning() ? MaxSpeed * RunModifier : MaxSpeed;
 }
+
+void UMyCharacterMovementComponent::SetRunModifier(float NewModifier)
+{
+	if (GetOwnerRole() == ROLE_Authority) RunModifier = NewModifier;
+}
+
+void UMyCharacterMovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UMyCharacterMovementComponent, OwningPlayer);
+	DOREPLIFETIME(UMyCharacterMovementComponent, RunModifier);
+}
+

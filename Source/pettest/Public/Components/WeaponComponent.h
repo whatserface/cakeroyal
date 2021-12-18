@@ -19,7 +19,8 @@ class PETTEST_API UWeaponComponent : public UActorComponent
 public:
 	UWeaponComponent();
 
-	FOnReload OnReload;
+	FOnAmmoChanged OnAmmoChanged;
+	FOnTraceAppeared OnTraceAppeared;
 
 	bool CanShoot() const;
 
@@ -29,10 +30,12 @@ public:
 	UFUNCTION(Server, Unreliable)
 	void StopFire();
 
-	bool GetAmmoPercent(float& OutAmmoPercent);
+	int32 GetMaxAmmo();
 
-	UFUNCTION(Server, Unreliable)
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Weapon")
 	void Reload();
+	
+	bool CanReload() const;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -53,9 +56,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	UAnimMontage* ReloadMontageFPP;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	UAnimMontage* RifleMontageFPP;
-	
 	virtual void BeginPlay() override;
 
 private:
@@ -68,14 +68,17 @@ private:
 	bool bReloadAnimInProgress = false;
 
 	void SpawnTPPWeapon();
-	
-	UFUNCTION(Client, Unreliable, Category = "Shooting")
+	void AmmoChanged(int32 AmmoBullets);
+
+	UFUNCTION(Client, Unreliable, Category = "Weapon")
 	void SpawnFPPWeapon();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void PlayReloadAnim();
-	
-	bool CanReload() const;
+
+	UFUNCTION(Client, Unreliable, Category = "VFX")
+	void TraceAppeared(FVector TraceEnd);
+
 	void OnReloadFinished(USkeletalMeshComponent* MeshComp);
 	void InitAnimations();
 };

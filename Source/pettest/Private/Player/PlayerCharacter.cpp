@@ -24,21 +24,26 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>("HealthComponent");
 	HealthComponent->SetIsReplicated(true);
 	WeaponComponent = CreateDefaultSubobject<UWeaponComponent>("WeaponComponent");
+	CustomMovementComponent = Cast<UMyCharacterMovementComponent>(GetCharacterMovement());
 	WeaponComponent->SetIsReplicated(true);
-	
+
 	InnerMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FPPMesh");
 	InnerMesh->SetupAttachment(RootComponent);
+	InnerMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	InnerMesh->SetOnlyOwnerSee(true);
 	InnerMesh->SetCastShadow(false);
 
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->bCastHiddenShadow = true;
-	GetMesh()->SetIsReplicated(true);
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	USkeletalMeshComponent* DefMesh1P = Cast<USkeletalMeshComponent>(GetClass()->GetDefaultSubobjectByName(TEXT("FPPMesh")));
+	DefMesh = FRotationTranslationMatrix(DefMesh1P->GetRelativeRotation(), DefMesh1P->GetRelativeLocation());
+	UpdateMeshes();
 
 	check(HealthComponent);
 	HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
@@ -55,9 +60,12 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &APlayerCharacter::Jump);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &APlayerCharacter::Run);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &APlayerCharacter::StopRun);
-	PlayerInputComponent->BindAction("Shoot", IE_Pressed, WeaponComponent, &UWeaponComponent::StartFire);
-	PlayerInputComponent->BindAction("Shoot", IE_Released, WeaponComponent, &UWeaponComponent::StopFire);
-	PlayerInputComponent->BindAction("Reload", IE_Pressed, WeaponComponent, &UWeaponComponent::Reload);
+	PlayerInputComponent->BindAction("OnMoveRight", IE_Pressed, this, &APlayerCharacter::OnMoveRightPressed);
+	PlayerInputComponent->BindAction("OnMoveRight", IE_Released, this, &APlayerCharacter::OnMoveRightReleased);
+	PlayerInputComponent->BindAction("OnMoveLeft", IE_Released, this, &APlayerCharacter::OnMoveRightReleased);
+	PlayerInputComponent->BindAction("Shoot", IE_Pressed, this, &APlayerCharacter::StartFire);
+	PlayerInputComponent->BindAction("Shoot", IE_Released, this, &APlayerCharacter::StopFire);
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &APlayerCharacter::Reload);
 }
 
 void APlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -75,7 +83,7 @@ void APlayerCharacter::MoveForward(float Value)
 	{
 		SetbIsMovingForward(Value > 0.0f);
 	}
-	
+
 	if (Value == 0.0f) return;
 
 	AddMovementInput(GetActorForwardVector(), Value);
@@ -85,7 +93,7 @@ void APlayerCharacter::MoveRight(float Value)
 {
 	if (Value == 0.0f) return;
 
-	SetbIsMovingForward(false);
+	//SetbIsMovingForward(false);
 	AddMovementInput(GetActorRightVector(), Value);
 }
 
@@ -128,6 +136,16 @@ void APlayerCharacter::SetCanRun(bool CanRun)
 	if (HasAuthority()) bCanRun = CanRun;
 }
 
+void APlayerCharacter::OnMoveRightPressed_Implementation()
+{
+	CustomMovementComponent->SetRunModifier(SiteRunModifier);
+}
+
+void APlayerCharacter::OnMoveRightReleased_Implementation()
+{
+	CustomMovementComponent->SetRunModifier(RunModifier);
+}
+
 void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 {
 	WantsToRun = Value;
@@ -143,7 +161,7 @@ void APlayerCharacter::Server_OnDeath_Implementation()
 
 	GetCharacterMovement()->DisableMovement();
 	InnerMesh->SetVisibility(false, true);
-	
+
 	const auto CharController = Cast<ACharacterController>(Controller);
 	if (!CharController) return;
 
@@ -152,29 +170,17 @@ void APlayerCharacter::Server_OnDeath_Implementation()
 
 void APlayerCharacter::Multicast_Ragdoll_Implementation()
 {
-	if (!IsRunningDedicatedServer())
-	{
-		GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-		GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-		GetMesh()->SetSimulatePhysics(true);
-	}
-}
+	if (IsRunningDedicatedServer()) return;
 
-float APlayerCharacter::GetMovementDirection() const
-{
-	if (GetVelocity().IsZero()) return 0.0f;
-	const auto VelocityNormal = GetVelocity().GetSafeNormal();
-	const auto AngleBetween = FMath::Acos(FVector::DotProduct(GetActorForwardVector(), VelocityNormal));
-	const auto Degrees = FMath::RadiansToDegrees(AngleBetween);
-	const auto CrossProduct = FVector::CrossProduct(GetActorForwardVector(), VelocityNormal);
-	return CrossProduct.IsZero() ? Degrees : Degrees * FMath::Sign(CrossProduct.Z);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetSimulatePhysics(true);
+	UpdateMeshes();
 }
 
 void APlayerCharacter::OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation)
 {
-	USkeletalMeshComponent* DefMesh1P = Cast<USkeletalMeshComponent>(GetClass()->GetDefaultSubobjectByName(TEXT("FPPMesh")));
-	const FMatrix DefMesh = FRotationTranslationMatrix(DefMesh1P->GetRelativeRotation(), DefMesh1P->GetRelativeLocation());
 	const FMatrix LocalToWorld = ActorToWorld().ToMatrixWithScale();
 
 	const FRotator RotCameraPitch(CameraRotation.Pitch, 0.0f, 0.0f);
@@ -186,4 +192,68 @@ void APlayerCharacter::OnCameraUpdate(const FVector& CameraLocation, const FRota
 	const FMatrix PitchedMesh = MeshRelativeToCamera * PitchedCameraLS;
 
 	InnerMesh->SetRelativeLocationAndRotation(PitchedMesh.GetOrigin(), PitchedMesh.Rotator());
+}
+
+void APlayerCharacter::UpdateMeshes()
+{
+	InnerMesh->VisibilityBasedAnimTickOption = IsLocallyControlled() ? EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones : EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	GetMesh()->VisibilityBasedAnimTickOption = IsLocallyControlled() ? EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered : EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+}
+
+void APlayerCharacter::StartFire()
+{
+	if (!ShootMontageFPP) {
+		UE_LOG(LogPlayerCharacter, Warning, TEXT("Shoot montage is nullptr!"));
+	}
+
+	if (WeaponComponent && WeaponComponent->CanShoot() && InnerMesh->GetAnimInstance() && //
+		!InnerMesh->GetAnimInstance()->Montage_IsPlaying(ReloadMontageFPP))
+	{
+		if (ShootMontageFPP && !GetWorldTimerManager().IsTimerActive(ClientShootingTimer)) {
+			ClientShootingTimerDel.BindUFunction(this, TEXT("PlayAnimMontageFPP"), ShootMontageFPP);
+			GetWorldTimerManager().SetTimer(ClientShootingTimer, ClientShootingTimerDel, ShootMontageFPP->GetPlayLength(), true);
+			PlayAnimMontageFPP(ShootMontageFPP);
+		}
+		WeaponComponent->StartFire();
+	}
+}
+
+void APlayerCharacter::StopFire()
+{
+	if (!WeaponComponent) return;
+	WeaponComponent->StopFire();
+
+	if (GetWorldTimerManager().IsTimerActive(ClientShootingTimer)) {
+		GetWorldTimerManager().ClearTimer(ClientShootingTimer);
+	}
+}
+
+void APlayerCharacter::Reload()
+{
+	StopFire();
+	FTimerDelegate TimerCallback;
+	TimerCallback.BindLambda([this]() {
+		PlayAnimMontageFPP(ReloadMontageFPP);
+		WeaponComponent->Reload();
+	});
+	FTimerHandle TempHandle;
+	GetWorldTimerManager().SetTimer(TempHandle, TimerCallback, 0.1f, false);
+}
+
+void APlayerCharacter::PlayAnimMontageFPP(UAnimMontage* MontageToPlay)
+{
+	if (!InnerMesh || !InnerMesh->AnimScriptInstance || !MontageToPlay) {
+		UE_LOG(LogPlayerCharacter, Warning, TEXT("In 'PlayAnimMontageFPP' some nullptr occured"));
+		return;
+	}
+	const float Length = InnerMesh->AnimScriptInstance->Montage_Play(MontageToPlay);
+	UE_LOG(LogTemp, Display, TEXT("Anim montage playing for: %.2f secs"), Length);
+
+	for (FAnimMontageInstance* montage : InnerMesh->AnimScriptInstance->MontageInstances)
+	{
+		if (!montage || !montage->Montage) {
+			continue;
+		}
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *montage->Montage->GetName());
+	}
 }

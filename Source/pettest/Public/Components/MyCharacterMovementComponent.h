@@ -7,6 +7,7 @@
 #include "MyCharacterMovementComponent.generated.h"
 
 class FObjectInitializer;
+class APlayerCharacter;
 
 UCLASS()
 class PETTEST_API UMyCharacterMovementComponent : public UCharacterMovementComponent
@@ -14,10 +15,18 @@ class PETTEST_API UMyCharacterMovementComponent : public UCharacterMovementCompo
 	GENERATED_BODY()
 public:
 	UMyCharacterMovementComponent(const FObjectInitializer& ObjInit);
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = "1.5", ClampMax = "12"))
-	float RunModifier = 2.0f;
-
 	
 	virtual float GetMaxSpeed() const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	void SetRunModifier(float NewModifier);
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = "1.5", ClampMax = "12"))
+	float RunModifier = 1.8f;
+
+	virtual void BeginPlay() override;
+
+private:
+	UPROPERTY(Transient, Replicated)
+	APlayerCharacter* OwningPlayer;
 };

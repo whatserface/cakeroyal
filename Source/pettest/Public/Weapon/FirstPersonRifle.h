@@ -6,11 +6,23 @@
 #include "FirstPersonWeapon.h"
 #include "FirstPersonRifle.generated.h"
 
+class UNiagaraSystem;
+
 UCLASS()
 class PETTEST_API AFirstPersonRifle : public AFirstPersonWeapon
 {
 	GENERATED_BODY()
 
 public:
-	//AFirstPersonRifle();
+	UFUNCTION(Client, Unreliable, Category = "VFX")
+	void PlayTraceFX(FVector TraceEnd);
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
+	UNiagaraSystem* TraceFX;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
+	FString TraceTargetName = "LaserEnd";
+
+	virtual void BeginPlay() override;
 };

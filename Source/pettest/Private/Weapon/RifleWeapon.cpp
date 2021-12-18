@@ -7,6 +7,10 @@
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRifleWeapon, All, All)
 
@@ -25,9 +29,17 @@ void ARifleWeapon::StopFire()
 	if (!GetOwner() || !HasAuthority()) return;
 	
 	GetWorldTimerManager().ClearTimer(ShootingTimer);
+	SetFXActive(false);
 	/*const auto OwnerPawn = Cast<APawn>(GetOwner());
 	check(OwnerPawn);
 	Client_Recoil(OwnerPawn, false);*/
+}
+
+void ARifleWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//
 }
 
 void ARifleWeapon::MakeShot()
@@ -51,6 +63,7 @@ void ARifleWeapon::MakeShot()
 	ActorsToIgnore.Add(OwnerPawn);
 	ActorsToIgnore.Add(this);
 	CollisionParams.AddIgnoredActors(ActorsToIgnore);
+	CollisionParams.bReturnPhysicalMaterial = true;
 	FHitResult HitResult;
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, CollisionParams))
 	{
@@ -62,8 +75,10 @@ void ARifleWeapon::MakeShot()
 		}
 	}
 	ReduceAmmo();
-	LogAmmo();
-	UKismetSystemLibrary::DrawDebugArrow(this, TraceStart, TraceEnd, 5.0f, FLinearColor::Red, 5.0f, 1.0f);
+	PlayImpactFX(HitResult);
+	SpawnTraceFX(WeaponMesh->GetSocketLocation(MuzzleSocketName), TraceEnd);
+	OnTraceAppeared.Execute(TraceEnd);
+	//UKismetSystemLibrary::DrawDebugArrow(this, TraceStart, TraceEnd, 5.0f, FLinearColor::Red, 5.0f, 1.0f);
 	Client_Recoil(OwnerPawn, true);
 }
 
@@ -77,4 +92,38 @@ void ARifleWeapon::Client_Recoil_Implementation(APawn* ApplyTo, bool IsGoingUp)
 	{
 		Redo_Recoil(ApplyTo);
 	}
+}
+
+void ARifleWeapon::PlayImpactFX_Implementation(const FHitResult& Hit)
+{
+	if (IsRunningDedicatedServer()) return;
+
+	UNiagaraSystem* NiagaraEffect = ImpactEffect;
+	if (Hit.PhysMaterial.IsValid())
+	{
+		const auto PhysMat = Hit.PhysMaterial.Get();
+		if (ImpactDataMap.Contains(PhysMat))
+		{
+			NiagaraEffect = ImpactDataMap[PhysMat];
+		}
+	}
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+}
+
+void ARifleWeapon::SpawnTraceFX_Implementation(const FVector& TraceStart, const FVector& TraceEnd)
+{
+	if (IsRunningDedicatedServer() || (GetInstigatorController() && GetInstigatorController()->IsLocalPlayerController())) return;
+
+	const auto TraceFXComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), TraceFX, TraceStart);
+	if (TraceFXComponent) {
+		TraceFXComponent->SetNiagaraVariableVec3(TraceTargetName, TraceEnd);
+	}
+}
+
+void ARifleWeapon::SetFXActive(bool IsActive)
+{
+	if (!HasAuthority()) return;
+	
+	// Повторяющиеся звуки выстрелов
 }

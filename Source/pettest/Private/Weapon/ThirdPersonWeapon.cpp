@@ -5,6 +5,8 @@
 #include "Components/WeaponComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/PlayerCharacter.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTPPWeapon, All, All)
 
@@ -28,12 +30,17 @@ void AThirdPersonWeapon::BeginPlay()
 	checkf(WeaponInfo.Bullets > 0, TEXT("Bullets count couldn't be less or equal zero"));
 
 	Bullets = WeaponInfo.Bullets;
+
+	if (!GetOwner()) return;
+	
+	WeaponComponent = GetOwner()->FindComponentByClass<UWeaponComponent>();
 }
 
 void AThirdPersonWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
+	
+	DOREPLIFETIME_CONDITION(AThirdPersonWeapon, WeaponComponent, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(AThirdPersonWeapon, Bullets, COND_OwnerOnly);
 }
 
@@ -49,19 +56,19 @@ void AThirdPersonWeapon::StopFire()
 
 void AThirdPersonWeapon::ReduceAmmo()
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority() || !WeaponComponent) return;
 
 	if (Bullets == 0)
 	{
 		UE_LOG(LogTPPWeapon, Warning, TEXT("Clip is empty"));
 		return;
 	}
-	Bullets--;
+	--Bullets;
+	ForceNetUpdate();
+	Client_InvokeAmmoChanged(Bullets);
 	if (Bullets == 0)
 	{
 		StopFire();
-		OnReload.Execute();
-		UE_LOG(LogTemp, Display, TEXT("On reload broadcasting"));
 	}
 }
 
@@ -69,7 +76,6 @@ bool AThirdPersonWeapon::CanShoot()
 {
 	if (!HasAuthority() || !GetOwner() || !GetWorld() || IsAmmoEmpty() || !GetOwner()) return false;
 
-	const auto WeaponComponent = GetOwner()->FindComponentByClass<UWeaponComponent>();
 	return WeaponComponent && WeaponComponent->CanShoot();
 }
 
@@ -78,23 +84,17 @@ void AThirdPersonWeapon::LogAmmo()
 	if (HasAuthority()) UE_LOG(LogTPPWeapon, Display, TEXT("Bullets: %i"), Bullets);
 }
 
-void AThirdPersonWeapon::Reload()
+bool AThirdPersonWeapon::Client_InvokeAmmoChanged_Validate(int32 Ammo)
 {
-	if (HasAuthority()) 
-	{
-		Bullets = WeaponInfo.Bullets;
-		UE_LOG(LogTemp, Display, TEXT("Reloaded bullets on server!!"));
-	}
+	return 0 <= Ammo && Ammo <= WeaponInfo.Bullets;
 }
 
-void AThirdPersonWeapon::GetWeaponBullets(float& AmmoPercent) const
+void AThirdPersonWeapon::Client_InvokeAmmoChanged_Implementation(int32 Ammo)
 {
-	if (Bullets != 0)
-	{
-		AmmoPercent = (float)(WeaponInfo.Bullets - Bullets) / (float)(WeaponInfo.Bullets);
-	}
-	else
-	{
-		AmmoPercent = 1.0f;
-	}
+	OnAmmoChanged.Execute(Ammo);
+}
+
+void AThirdPersonWeapon::Reload()
+{
+	if (HasAuthority()) Bullets = WeaponInfo.Bullets;
 }

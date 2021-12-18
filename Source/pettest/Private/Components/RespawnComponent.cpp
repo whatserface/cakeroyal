@@ -8,6 +8,7 @@
 URespawnComponent::URespawnComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	
 }
 
 void URespawnComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -29,7 +30,7 @@ void URespawnComponent::Respawn(int32 RespawnTime)
 
 void URespawnComponent::RespawnTimerUpdate()
 {
-	UE_LOG(LogTemp, Display, TEXT("updaTE. RespawnCountDown: %i"), RespawnCountDown);
+	UE_LOG(LogTemp, Display, TEXT("update. RespawnCountDown: %i"), RespawnCountDown);
 	if (GetOwnerRole() == ROLE_Authority && --RespawnCountDown == 0)
 	{
 		if (!GetWorld()) return;
@@ -45,6 +46,11 @@ void URespawnComponent::RespawnTimerUpdate()
 			bIsRespawnInProgress = false;
 		}
 	}
+}
+
+int32 URespawnComponent::GetRespawnCountDown() const
+{
+	return RespawnCountDown;
 }
 
 void URespawnComponent::ProcessOnPawnRespawn_Implementation()

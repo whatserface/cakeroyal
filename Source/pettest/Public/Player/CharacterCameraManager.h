@@ -22,4 +22,7 @@ protected:
 	APlayerCharacter* MyPawn;
 
 	virtual void BeginPlay() override;
+
+private:
+	void UpdatePawn(APawn* NewPawn);
 };

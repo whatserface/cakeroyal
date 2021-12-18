@@ -15,10 +15,6 @@ class PETTEST_API UPlayerHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-public:
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	bool GetAmmoPercent(float& AmmoPercent) const;
-
 protected:
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* MainHUD;
@@ -50,15 +46,23 @@ protected:
 	virtual void NativeOnInitialized() override;
 
 private:
-	void OnNewPawn(APawn* NewPawn);
-	void OnHealthChanged(float NewHealth);
-	void OnArmorChanged(float NewArmor);
-	void OnPawnDeath();
-	void OnReload();
+	FTimerHandle WeaponTimer;
 
 	float MaxArmor;
 	float MaxHealth;
+	int32 MaxAmmo = -1;
 	
 	float LastHP;
 	bool bHasJustSpawned = true;
+
+	UFUNCTION()
+	void WriteFromWeaponComponent(APawn* Pawn);
+	
+	UFUNCTION()
+	void OnAmmoChanged(int32 NewAmmo);
+
+	void OnPawnDeath();
+	void OnNewPawn(APawn* NewPawn);
+	void OnHealthChanged(float NewHealth);
+	void OnArmorChanged(float NewArmor);
 };
