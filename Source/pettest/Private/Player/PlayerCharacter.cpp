@@ -10,6 +10,10 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/HealthComponent.h"
 #include "Components/WeaponComponent.h"
+#include "Components/RespawnComponent.h"
+#include "MyGameModeBase.h"
+#include "Sound/SoundCue.h"
+#include "Kismet/GameplayStatics.h"
 #include "MyGameModeBase.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPlayerCharacter, All, All)
@@ -35,6 +39,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjInit)
 
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->bCastHiddenShadow = true;
+	Tags.Add("Player");
+	
 }
 
 void APlayerCharacter::BeginPlay()
@@ -153,6 +159,7 @@ void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 
 void APlayerCharacter::Server_OnDeath_Implementation()
 {
+	PlaySoundWaveLocally(DeathSoundWave, 1.f);
 	SetLifeSpan(LastLifeSpan);
 	WeaponComponent->StopFire();
 
@@ -177,6 +184,7 @@ void APlayerCharacter::Multicast_Ragdoll_Implementation()
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	GetMesh()->SetSimulatePhysics(true);
 	UpdateMeshes();
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), BodyfallSound, GetActorLocation());
 }
 
 void APlayerCharacter::OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation)
@@ -211,7 +219,7 @@ void APlayerCharacter::StartFire()
 	{
 		if (ShootMontageFPP && !GetWorldTimerManager().IsTimerActive(ClientShootingTimer)) {
 			ClientShootingTimerDel.BindUFunction(this, TEXT("PlayAnimMontageFPP"), ShootMontageFPP);
-			GetWorldTimerManager().SetTimer(ClientShootingTimer, ClientShootingTimerDel, ShootMontageFPP->GetPlayLength(), true);
+			GetWorldTimerManager().SetTimer(ClientShootingTimer, ClientShootingTimerDel, WeaponComponent->GetFireRate(), true);
 			PlayAnimMontageFPP(ShootMontageFPP);
 		}
 		WeaponComponent->StartFire();
@@ -230,14 +238,17 @@ void APlayerCharacter::StopFire()
 
 void APlayerCharacter::Reload()
 {
-	StopFire();
-	FTimerDelegate TimerCallback;
-	TimerCallback.BindLambda([this]() {
-		PlayAnimMontageFPP(ReloadMontageFPP);
-		WeaponComponent->Reload();
-	});
-	FTimerHandle TempHandle;
-	GetWorldTimerManager().SetTimer(TempHandle, TimerCallback, 0.1f, false);
+	if (WeaponComponent && WeaponComponent->CanReload())
+	{
+		StopFire();
+		FTimerDelegate TimerCallback;
+		TimerCallback.BindLambda([this]() {
+			PlayAnimMontageFPP(ReloadMontageFPP);
+			WeaponComponent->Reload();
+								 });
+		FTimerHandle TempHandle;
+		GetWorldTimerManager().SetTimer(TempHandle, TimerCallback, 0.1f, false);
+	}
 }
 
 void APlayerCharacter::PlayAnimMontageFPP(UAnimMontage* MontageToPlay)
@@ -248,12 +259,9 @@ void APlayerCharacter::PlayAnimMontageFPP(UAnimMontage* MontageToPlay)
 	}
 	const float Length = InnerMesh->AnimScriptInstance->Montage_Play(MontageToPlay);
 	UE_LOG(LogTemp, Display, TEXT("Anim montage playing for: %.2f secs"), Length);
+}
 
-	for (FAnimMontageInstance* montage : InnerMesh->AnimScriptInstance->MontageInstances)
-	{
-		if (!montage || !montage->Montage) {
-			continue;
-		}
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *montage->Montage->GetName());
-	}
+void APlayerCharacter::PlaySoundWaveLocally_Implementation(USoundWave* SoundToPlay, float VolumeMultiplier)
+{
+	UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, VolumeMultiplier);
 }

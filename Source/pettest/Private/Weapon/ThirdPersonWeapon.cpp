@@ -74,9 +74,9 @@ void AThirdPersonWeapon::ReduceAmmo()
 
 bool AThirdPersonWeapon::CanShoot()
 {
-	if (!HasAuthority() || !GetOwner() || !GetWorld() || IsAmmoEmpty() || !GetOwner()) return false;
+	if (!GetOwner() || !GetWorld() || IsAmmoEmpty()) return false;
 
-	return WeaponComponent && WeaponComponent->CanShoot();
+	return WeaponComponent != nullptr;
 }
 
 void AThirdPersonWeapon::LogAmmo()

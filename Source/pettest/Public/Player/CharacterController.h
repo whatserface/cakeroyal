@@ -6,8 +6,6 @@
 #include "GameFramework/PlayerController.h"
 #include "CharacterController.generated.h"
 
-
-
 UCLASS()
 class PETTEST_API ACharacterController : public APlayerController
 {
@@ -15,6 +13,8 @@ class PETTEST_API ACharacterController : public APlayerController
 
 public:
 	ACharacterController();
+
+	void PostLogin();
 
 	virtual void OnRep_Pawn() override;
 

@@ -28,6 +28,38 @@ void UPlayerHUDWidget::NativeOnInitialized()
 	OnNewPawn(GetOwningPlayerPawn());
 }
 
+void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
+{
+	Super::NativeTick(MyGeometry, DeltaTime);
+
+	ManageInterpolations(DeltaTime);
+}
+
+void UPlayerHUDWidget::ManageInterpolations(float DeltaTime)
+{
+	if (bShouldInterpolateHealth && HealthProgressBar) {
+		InterpolateHealthFrom = FMath::FInterpTo(InterpolateHealthFrom, InterpolateHealthTo, DeltaTime, 10.0f);
+		HealthProgressBar->SetPercent(InterpolateHealthFrom / MaxHealth);
+
+		if (FMath::IsNearlyEqual(InterpolateHealthFrom, InterpolateHealthTo, 0.01f))
+		{
+			HealthProgressBar->SetPercent(InterpolateHealthTo / MaxHealth);
+			bShouldInterpolateHealth = false;
+		}
+	}
+	if (bShouldInterpolateArmor && ArmorProgressBar) {
+		InterpolateArmorFrom = FMath::FInterpTo(InterpolateArmorFrom, InterpolateArmorTo, DeltaTime, 5.f);
+		UE_LOG(LogTemp, Display, TEXT("Interpolating Armor: %.2f"), InterpolateArmorFrom);
+		ArmorProgressBar->SetPercent(InterpolateArmorFrom / MaxArmor);
+
+		if (FMath::IsNearlyEqual(InterpolateArmorFrom, InterpolateArmorTo, 0.01f)) 
+		{
+			ArmorProgressBar->SetPercent(InterpolateArmorTo / MaxArmor);
+			bShouldInterpolateArmor = false;
+		}
+	}
+}
+
 void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 {
 	if (!NewPawn || !GetWorld()) return;
@@ -51,6 +83,7 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 			MaxArmor = HealthComponent->GetMaxArmor();
 		}
 		OnHealthChanged(MaxHealth);
+		HealthProgressBar->SetPercent(1.0f);
 		UE_LOG(LogPlayerHUDWidget, Display, TEXT("Health Changed"));
 	}
 	if (!HealthComponent->OnDeath.IsBoundToObject(this))
@@ -89,37 +122,49 @@ void UPlayerHUDWidget::WriteFromWeaponComponent(APawn* Pawn)
 
 void UPlayerHUDWidget::OnHealthChanged(float NewHealth)
 {
-	if (NewHealth < 0.0f) return;
-	
-	if (LastHP != NewHealth) {
-		UE_LOG(LogTemp, Display, TEXT("Current HP: %.2f, Last HP was %.2f"), LastHP, NewHealth);
-		if (!bHasJustSpawned && !IsAnyAnimationPlaying()) {
-			if (NewHealth > LastHP)
-			{
-				PlayAnimation(HealthPickupAnimation);
-			}
-			else
-			{
-				PlayAnimation(HealthReduceAnimation);
-			}
-		}
-		bHasJustSpawned = false;
+	if (NewHealth < 0.0f)
+	{ 
+		UE_LOG(LogTemp, Display, TEXT("Failed. NewHealth: %.2f < 0.0f or %.2f == %.2f"), NewHealth, LastHP, NewHealth);
+		bShouldInterpolateHealth = false;
+		return;
 	}
-	else { UE_LOG(LogTemp, Display, TEXT("Check ON HEALTH CHANGED haven't been passed")); }
+	
+	UE_LOG(LogTemp, Display, TEXT("Current HP: %.2f, Last HP was %.2f"), LastHP, NewHealth);
+	if (!bHasJustSpawned) {
+		InterpolateHealthFrom = LastHP;
+		InterpolateHealthTo = NewHealth;
+		bShouldInterpolateHealth = true;
+
+		if (!IsAnyAnimationPlaying() && NewHealth != LastHP)
+		{
+			PlayAnimation(NewHealth > LastHP ? HealthPickupAnimation : HealthReduceAnimation);
+		}
+	}
+
+	bHasJustSpawned = false;
 	LastHP = NewHealth;
-	HealthProgressBar->SetPercent(NewHealth / MaxHealth);
 }
 
 void UPlayerHUDWidget::OnArmorChanged(float NewArmor)
 {
-	if (NewArmor < 0.0f) return;
-
+	if (NewArmor < 0.0f)
+	{
+		bShouldInterpolateArmor = false;
+		return;
+	}
+	
+	if (NewArmor != LastArmor)
+	{
+		InterpolateArmorFrom = LastArmor;
+		InterpolateArmorTo = NewArmor;
+		bShouldInterpolateArmor = true;
+	}
 	UE_LOG(LogTemp, Display, TEXT("New armor: %.2f"), NewArmor);
 	if (NewArmor == MaxArmor)
 	{
 		PlayAnimation(ArmorPickupAnimation);
 	}
-	ArmorProgressBar->SetPercent(NewArmor / MaxArmor);
+	LastArmor = NewArmor;
 }
 
 void UPlayerHUDWidget::OnAmmoChanged(int32 NewAmmo)

@@ -30,11 +30,12 @@ public:
 	UFUNCTION(Server, Unreliable)
 	void StopFire();
 
-	int32 GetMaxAmmo();
+	int32 GetMaxAmmo() const;
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Weapon")
 	void Reload();
 	
+	float GetFireRate() const;
 	bool CanReload() const;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

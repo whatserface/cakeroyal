@@ -5,6 +5,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Sound/SoundCue.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogBasePickup, All, All)
 
@@ -14,7 +16,9 @@ ABasePickup::ABasePickup()
 	PrimaryActorTick.TickInterval = 0.02f;
 
 	bReplicates = true;
+	bNetUseOwnerRelevancy = true;
 	SetReplicateMovement(false);
+
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>("CollisionComponent");
 	CollisionComponent->SetSphereRadius(51.0f);
 	CollisionComponent->SetIsReplicated(true);
@@ -34,8 +38,7 @@ void ABasePickup::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!bIsActive) return;
-	HandleMovement();
+	if (bIsActive) HandleMovement();
 }
 
 void ABasePickup::HandleMovement()
@@ -64,17 +67,25 @@ void ABasePickup::PickupWasTaken(AActor* PickupActor)
 	}
 	else if (!HasAuthority()) return;
 
+	SetOwner(PickupActor);
 	FTimerDelegate TimerDel;
 	TimerDel.BindUFunction(this, TEXT("ChangeBehaviour"), true);
 
+	Client_PlaySound();
 	GivePickupTo(PickupActor);
 	ChangeBehaviour(false);
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, TimerDel, RespawnTime, false);
 }
 
+void ABasePickup::Client_PlaySound_Implementation()
+{
+	UE_LOG(LogTemp, Display, TEXT("played sound"));
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), PickupSound, GetActorLocation());
+}
+
 void ABasePickup::GivePickupTo_Implementation(AActor* PickupActor)
 {
-	UE_LOG(LogTemp, Display, TEXT("Overlapped pickup doesn't have implementation of Give Pickup To method"));
+	UE_LOG(LogBasePickup, Warning, TEXT("Overlapped pickup doesn't have implementation of Give Pickup To method"));
 }
 
 void ABasePickup::ChangeBehaviour(bool IsActive)

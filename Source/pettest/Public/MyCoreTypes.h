@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Weapon/FirstPersonWeapon.h"
 #include "MyCoreTypes.generated.h"
 
@@ -18,6 +19,9 @@ struct FWeaponInfo
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	TSubclassOf<AFirstPersonWeapon> FPPWeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	float ShootingRate = -1.0f;
 };
 
 //health
@@ -27,3 +31,19 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnPawnRespawn, APawn*);
 
 //animation
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnNotifiedSignature, USkeletalMeshComponent*);
+
+//vfx
+class UNiagaraSystem;
+class USoundCue;
+
+USTRUCT(BlueprintType)
+struct FImpactData
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
+	UNiagaraSystem* NiagaraEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundCue* ImpactSound;
+};

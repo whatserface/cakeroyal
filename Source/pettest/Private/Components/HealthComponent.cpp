@@ -96,7 +96,7 @@ void UHealthComponent::SetHealth(float NewHealth)
 	if (GetOwnerRole() != ROLE_Authority) return;
 
 	Health = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
-	OnHealthChanged.Broadcast(Health/*, HealthDelta*/);
+	//OnHealthChanged.Broadcast(Health/*, HealthDelta*/);
 	Client_InvokeOnHealthChanged(Health);
 }
 

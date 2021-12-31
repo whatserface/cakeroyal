@@ -13,6 +13,8 @@ class AThirdPersonWeapon;
 class AFirstPersonWeapon;
 class UMyCharacterMovementComponent;
 class UWeaponComponent;
+class USoundCue;
+class USoundWave;
 
 UCLASS()
 class PETTEST_API APlayerCharacter : public ACharacter
@@ -32,7 +34,8 @@ public:
 
 	void SetCanRun(bool CanRun);
 	void OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation);
-	USkeletalMeshComponent* GetInnerMesh() { return InnerMesh; }
+	USkeletalMeshComponent* GetInnerMesh() const { return InnerMesh; }
+	UWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
@@ -62,6 +65,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement", meta = (Tooltip="This is the run modifier that will be set when Character will start to walk sides (right, left). If you change this, consider changing the original RunModifier value in CharacterMovementComponent"))
 	float RunModifier = 1.8f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundWave* DeathSoundWave;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundCue* BodyfallSound;
+
 	virtual void BeginPlay() override;
 
 	UFUNCTION(Server, Unreliable, Category = "Death")
@@ -69,6 +78,9 @@ protected:
 
 	UFUNCTION(NetMulticast, Unreliable, Category = "Death")
 	void Multicast_Ragdoll();
+
+	UFUNCTION(Client, Unreliable, BlueprintCallable)
+	void PlaySoundWaveLocally(USoundWave* SoundToPlay, float VolumeMultiplier);
 
 private:
 	FMatrix DefMesh;
@@ -96,6 +108,12 @@ private:
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void OnMoveRightReleased();
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void StartFire();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void StopFire();
+
 	UFUNCTION()
 	void PlayAnimMontageFPP(UAnimMontage* MontageToPlay);
 
@@ -107,9 +125,5 @@ private:
 	void Run();
 	void StopRun();
 	
-	void StartFire();
-	
-	void StopFire();
-
 	void UpdateMeshes();
 };

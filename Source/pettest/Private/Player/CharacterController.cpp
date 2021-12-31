@@ -2,6 +2,7 @@
 
 
 #include "Player/CharacterController.h"
+#include "Player/PlayerCharacter.h"
 #include "Player/CharacterCameraManager.h"
 #include "Components/RespawnComponent.h"
 #include "GameFramework/SpectatorPawn.h"
@@ -13,6 +14,8 @@ ACharacterController::ACharacterController()
 	PlayerCameraManagerClass = ACharacterCameraManager::StaticClass();
 	RespawnComponent = CreateDefaultSubobject<URespawnComponent>("RespawnComponent");
 	RespawnComponent->SetIsReplicated(true);
+
+	Tags.Add("Player");
 }
 
 void ACharacterController::OnRep_Pawn()
@@ -24,7 +27,6 @@ void ACharacterController::OnRep_Pawn()
 		AutoManageActiveCameraTarget(GetSpectatorPawn());
 	}
 }
-
 
 void ACharacterController::StartSpectating()
 {

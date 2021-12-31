@@ -14,6 +14,7 @@ class APlayerCharacter;
 class UNiagaraComponent;
 class UNiagaraSystem;
 class UWeaponComponent;
+class USoundCue;
 
 UCLASS(Abstract, Blueprintable)
 class PETTEST_API AThirdPersonWeapon : public AActor
@@ -31,6 +32,7 @@ public:
 	virtual void StartFire();
 	virtual void StopFire();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool CanShoot();
 
 	bool CanReload() const { return Bullets != WeaponInfo.Bullets; }
 	bool IsAmmoEmpty() const { return Bullets == 0; }
@@ -47,9 +49,6 @@ protected:
 	float ShootLength = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	float ShootingRate = -1.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	FWeaponInfo WeaponInfo;
 
 	UPROPERTY(Replicated, Transient)
@@ -58,13 +57,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (Tooltip = "Keep it in sync with first person weapon!"))
 	FName MuzzleSocketName = "MuzzleFlashSocket";
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundCue* FireSound;
+
 	UFUNCTION(Client, Unreliable, WithValidation)
 	void Client_InvokeAmmoChanged(int32 Ammo);
 
 	virtual void BeginPlay() override;
 	void ReduceAmmo();
 	virtual void MakeShot() { return; }
-	virtual bool CanShoot();
 	
 	void LogAmmo();
 

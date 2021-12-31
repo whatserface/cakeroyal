@@ -18,7 +18,7 @@ UWeaponComponent::UWeaponComponent()
 void UWeaponComponent::BeginPlay()
 {
     Super::BeginPlay();
-
+    
     if (GetOwnerRole() == ROLE_Authority)
     {
         MyPawn = Cast<APlayerCharacter>(GetOwner());
@@ -28,8 +28,9 @@ void UWeaponComponent::BeginPlay()
     }
     if (!TPPWeapon) return;
 
-    TPPWeapon->OnAmmoChanged.BindUObject(this, &UWeaponComponent::AmmoChanged);
-    TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
+    if (!TPPWeapon->OnAmmoChanged.IsBound()) {
+        TPPWeapon->OnAmmoChanged.BindUObject(this, &UWeaponComponent::AmmoChanged);
+    }
 }
 
 void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -41,15 +42,15 @@ void UWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     if (TPPWeapon) 
     {
         TPPWeapon->DetachFromActor(Detachment);
-        TPPWeapon->Destroy();
-        UE_LOG(LogWeaponComponent, Display, TEXT("TPP Weapon successfully destroyed"));
+        const bool bWasDestroyed = TPPWeapon->Destroy();
+        UE_LOG(LogWeaponComponent, Display, TEXT("TPP Weapon %s destroyed"), bWasDestroyed ? TEXT("successfully ") : TEXT("couldn't be "));
     }
     else { UE_LOG(LogWeaponComponent, Warning, TEXT("When destroying TPP Weapon was nullptr")); }
     if (FPPWeapon)
     {
         FPPWeapon->DetachFromActor(Detachment);
-        FPPWeapon->Destroy();
-        UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon successfully destroyed"));
+        const bool bWasDestroyed = FPPWeapon->Destroy();
+        UE_LOG(LogWeaponComponent, Display, TEXT("FPP Weapon %s destroyed"), bWasDestroyed ? TEXT("successfully ") : TEXT("couldn't be "));
     }
     MyPawn = nullptr;
 
@@ -82,20 +83,26 @@ void UWeaponComponent::SpawnTPPWeapon()
     FAttachmentTransformRules TransformRules(EAttachmentRule::SnapToTarget, false);
     TPPWeapon->AttachToComponent(MyPawn->GetMesh(), TransformRules, WeaponSocketName);
     GetOwner()->ForceNetUpdate();
+
+    TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
+
     FTimerHandle TestTimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.3f, false);
+    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.5f, false);
 }
- 
+
 void UWeaponComponent::SpawnFPPWeapon_Implementation()
 {
-    if (!MyPawn->IsLocallyControlled()) {
+    if (!MyPawn || !MyPawn->IsLocallyControlled()) {
         UE_LOG(LogWeaponComponent, Warning, TEXT("Pawn isn't locally controlled"));
         return;
     }
     // assigning delegates to client, because they don't replicate
-    TPPWeapon->OnAmmoChanged.BindUObject(this, &UWeaponComponent::AmmoChanged);
-    //TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
-    
+    if (!TPPWeapon->OnAmmoChanged.IsBound()) {
+        TPPWeapon->OnAmmoChanged.BindUObject(this, &UWeaponComponent::AmmoChanged);
+    }
+    if (!TPPWeapon->OnTraceAppeared.IsBound()) {
+        TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
+    }
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = MyPawn;
     SpawnParams.Instigator = MyPawn;
@@ -117,7 +124,7 @@ void UWeaponComponent::StartFire_Implementation()
         UE_LOG(LogWeaponComponent, Warning, TEXT("Weapon or pawn's pointer is null"));
         return;
     }
-    if (bReloadAnimInProgress) return;
+    if (!CanShoot()) return;
     
     TPPWeapon->StartFire();
 }
@@ -151,7 +158,7 @@ void UWeaponComponent::Reload_Implementation()
 
 bool UWeaponComponent::CanShoot() const
 {
-    return TPPWeapon && !TPPWeapon->IsAmmoEmpty() && !bReloadAnimInProgress && MyPawn && !MyPawn->IsRunning();
+    return TPPWeapon && TPPWeapon->CanShoot() && !bReloadAnimInProgress && MyPawn && !MyPawn->IsRunning();
 }
 
 void UWeaponComponent::PlayReloadAnim_Implementation()
@@ -174,9 +181,14 @@ void UWeaponComponent::PlayReloadAnim_Implementation()
     }
 }
 
-int32 UWeaponComponent::GetMaxAmmo()
+int32 UWeaponComponent::GetMaxAmmo() const
 {
     return TPPWeapon ? TPPWeapon->GetWeaponInfo().Bullets : -1;
+}
+
+float UWeaponComponent::GetFireRate() const
+{
+    return TPPWeapon ? TPPWeapon->GetWeaponInfo().ShootingRate : -1.0f;
 }
 
 void UWeaponComponent::InitAnimations()

@@ -19,7 +19,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* MainHUD;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	UProgressBar* HealthProgressBar;
 
 	UPROPERTY(meta = (BindWidget))
@@ -43,7 +43,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UDeathWidget* DeathWidget;
 
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Animation")
+	void ShrinkHealthBar(float NewHealth, float LastHealth);
+
 	virtual void NativeOnInitialized() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float DeltaTime) override;
 
 private:
 	FTimerHandle WeaponTimer;
@@ -52,7 +57,16 @@ private:
 	float MaxHealth;
 	int32 MaxAmmo = -1;
 	
+	bool bShouldInterpolateHealth = false;
+	float InterpolateHealthFrom;
+	float InterpolateHealthTo;
+
+	bool bShouldInterpolateArmor = false;
+	float InterpolateArmorFrom;
+	float InterpolateArmorTo;
+
 	float LastHP;
+	float LastArmor;
 	bool bHasJustSpawned = true;
 
 	UFUNCTION()
@@ -61,6 +75,7 @@ private:
 	UFUNCTION()
 	void OnAmmoChanged(int32 NewAmmo);
 
+	void ManageInterpolations(float DeltaTime);
 	void OnPawnDeath();
 	void OnNewPawn(APawn* NewPawn);
 	void OnHealthChanged(float NewHealth);

@@ -6,6 +6,7 @@
 #include "Player/CharacterController.h"
 #include "UI/GameHUD.h"
 #include "Components/RespawnComponent.h"
+#include "Components/WeaponComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMyGameModeBase, All, All)
 

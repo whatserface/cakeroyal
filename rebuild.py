@@ -3,11 +3,15 @@ import shutil
 import glob
 import ctypes
 
-UE4_ENGINE_PATH = r'D:\Soft\UE_4.26'
+UE4_ENGINE_PATH = r'D:\Soft\UE_4.27'
 cwd = os.getcwd()
 PROJECT_NAME = cwd[cwd.rfind('\\')+1:]
 
-os.remove(os.path.join(cwd, f'{PROJECT_NAME}.sln'))
+try:
+    os.remove(os.path.join(cwd, f'{PROJECT_NAME}.sln'))
+except:
+    print("Solution file doesn't exist")
+
 try:
     shutil.rmtree(os.path.join(cwd, 'DerivedDataCache'))
 except:

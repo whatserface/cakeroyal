@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "BasePickup.generated.h"
 
+class USoundCue;
+
 UCLASS(Abstract, Blueprintable)
 class PETTEST_API ABasePickup : public AActor
 {
@@ -33,11 +35,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float Frequency = 2.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
+	USoundCue* PickupSound;
+
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
 	void PickupWasTaken(AActor* PickupActor);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Pickup")
 	void GivePickupTo(AActor* PickupActor);
+
+	UFUNCTION(Client, Unreliable)
+	void Client_PlaySound();
 
 	virtual void BeginPlay() override;
 
