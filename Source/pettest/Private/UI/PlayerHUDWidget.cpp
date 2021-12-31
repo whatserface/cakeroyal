@@ -21,7 +21,7 @@ void UPlayerHUDWidget::NativeOnInitialized()
 	const auto RespawnComponent = GetOwningPlayer()->FindComponentByClass<URespawnComponent>();
 	if (!RespawnComponent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Respawn Component was nullptr"));
+		UE_LOG(LogPlayerHUDWidget, Warning, TEXT("Respawn Component was nullptr"));
 		return;
 	}
 	RespawnComponent->OnPawnRespawn.AddUObject(this, &UPlayerHUDWidget::OnNewPawn);
@@ -84,7 +84,6 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 		}
 		OnHealthChanged(MaxHealth);
 		HealthProgressBar->SetPercent(1.0f);
-		UE_LOG(LogPlayerHUDWidget, Display, TEXT("Health Changed"));
 	}
 	if (!HealthComponent->OnDeath.IsBoundToObject(this))
 	{
@@ -93,7 +92,6 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 	if (!WeaponComponent->OnAmmoChanged.IsBoundToObject(this))
 	{
 		WeaponComponent->OnAmmoChanged.BindUObject(this, &UPlayerHUDWidget::OnAmmoChanged);
-		UE_LOG(LogTemp, Display, TEXT("Binded to ammo changed delegate, running %s"), NewPawn->IsLocallyControlled() ? TEXT("locally") : TEXT("remotely"));
 		if (MaxAmmo == -1) {
 			FTimerDelegate WeaponDelegate;
 			WeaponDelegate.BindUFunction(this, TEXT("WriteFromWeaponComponent"), NewPawn);
@@ -104,7 +102,6 @@ void UPlayerHUDWidget::OnNewPawn(APawn* NewPawn)
 
 void UPlayerHUDWidget::OnPawnDeath()
 {
-	UE_LOG(LogTemp, Display, TEXT("SOMEBODY WAS KILLED"));
 	MainHUD->SetVisibility(ESlateVisibility::Collapsed);
 	bHasJustSpawned = true;
 	DeathWidget->SetVisibility(ESlateVisibility::Visible);
@@ -124,12 +121,10 @@ void UPlayerHUDWidget::OnHealthChanged(float NewHealth)
 {
 	if (NewHealth < 0.0f)
 	{ 
-		UE_LOG(LogTemp, Display, TEXT("Failed. NewHealth: %.2f < 0.0f or %.2f == %.2f"), NewHealth, LastHP, NewHealth);
 		bShouldInterpolateHealth = false;
 		return;
 	}
 	
-	UE_LOG(LogTemp, Display, TEXT("Current HP: %.2f, Last HP was %.2f"), LastHP, NewHealth);
 	if (!bHasJustSpawned) {
 		InterpolateHealthFrom = LastHP;
 		InterpolateHealthTo = NewHealth;
@@ -159,7 +154,6 @@ void UPlayerHUDWidget::OnArmorChanged(float NewArmor)
 		InterpolateArmorTo = NewArmor;
 		bShouldInterpolateArmor = true;
 	}
-	UE_LOG(LogTemp, Display, TEXT("New armor: %.2f"), NewArmor);
 	if (NewArmor == MaxArmor)
 	{
 		PlayAnimation(ArmorPickupAnimation);
@@ -171,9 +165,7 @@ void UPlayerHUDWidget::OnAmmoChanged(int32 NewAmmo)
 {
 	if (NewAmmo < 0) return;
 
-	UE_LOG(LogTemp, Display, TEXT("AMmo: %i"), NewAmmo);
-
-	const float AmmoPercent = NewAmmo != 0 ? (float)(MaxAmmo - NewAmmo) / (float)(MaxAmmo) : 1.0f;
+	const float AmmoPercent = NewAmmo != 0 ? ( (float)(MaxAmmo - NewAmmo) / (float)(MaxAmmo) ) : 1.0f;
 	AmmoProgressBar->SetPercent(AmmoPercent);
 	if (NewAmmo == 0 && !IsAnimationPlaying(ReloadAnimation))
 	{

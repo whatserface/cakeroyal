@@ -265,3 +265,16 @@ void APlayerCharacter::PlaySoundWaveLocally_Implementation(USoundWave* SoundToPl
 {
 	UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, VolumeMultiplier);
 }
+
+void APlayerCharacter::PlayCameraShakeRequest(TSubclassOf<UCameraShakeBase> CameraShake, float Scale/*= 1.0f*/)
+{
+	if (HasAuthority()) Client_PlayCameraShake(CameraShake, Scale);
+}
+
+void APlayerCharacter::Client_PlayCameraShake_Implementation(TSubclassOf<UCameraShakeBase> CameraShake, float Scale)
+{
+	const auto PC = GetController<APlayerController>();
+	if (!PC || !PC->PlayerCameraManager) return;
+
+	PC->PlayerCameraManager->StartCameraShake(CameraShake, Scale);
+}

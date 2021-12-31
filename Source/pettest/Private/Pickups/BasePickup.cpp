@@ -44,7 +44,7 @@ void ABasePickup::Tick(float DeltaTime)
 void ABasePickup::HandleMovement()
 {
 	PickupMesh->AddLocalRotation(FRotator(0.0f, RotationYaw, 0.0f));
-
+	
 	FVector CurrentLocation = PickupMesh->GetRelativeLocation();
 	CurrentLocation.Z = Amplitude * FMath::Sin(Frequency * GetWorld()->GetTimeSeconds());
 	PickupMesh->SetRelativeLocation(CurrentLocation);

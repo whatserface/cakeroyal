@@ -12,6 +12,7 @@ class ACharacter;
 class UNiagaraSystem;
 class UPhysicalMaterial;
 class UAudioComponent;
+class UCameraShakeBase;
 
 UCLASS()
 class PETTEST_API ARifleWeapon : public AThirdPersonWeapon
@@ -38,6 +39,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
 	TMap<UPhysicalMaterial*, FImpactData> ImpactDataMap;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
+	TSubclassOf<UCameraShakeBase> ShootCameraShake;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
 	float BulletSpreadDefault = 1.5f;
@@ -68,9 +72,12 @@ private:
 	FTimerHandle FireRateControllerTimer;
 	bool bHasPassedFireRateDelay = true;
 
+	/** If the player didn't made any shot (e.g. was reloading, but tried to shoot), we don't make a delay*/
+	bool bMadeAnyShots = false;
+
 	/** As we only need to know once our owner we fill in this placeholder variable just for optimization reasons*/
 	UPROPERTY(Transient)
-	ACharacter* MyCharacter;
+	APlayerCharacter* MyCharacter;
 
 	UPROPERTY()
 	UAudioComponent* FireAudioComponent;

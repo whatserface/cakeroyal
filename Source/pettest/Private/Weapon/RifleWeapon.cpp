@@ -6,7 +6,7 @@
 #include "Components/WeaponComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/World.h"
-#include "GameFramework/Character.h"
+#include "Player/PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
@@ -28,7 +28,7 @@ void ARifleWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	MyCharacter = Cast<ACharacter>(GetOwner());
+	if (HasAuthority()) MyCharacter = Cast<APlayerCharacter>(GetOwner());
 }
 
 void ARifleWeapon::StartFire()
@@ -44,13 +44,15 @@ void ARifleWeapon::StopFire()
 {
 	if (!GetOwner() || !HasAuthority()) return;
 	
-	bHasPassedFireRateDelay = false;
 	GetWorldTimerManager().ClearTimer(ShootingTimer);
 	SetFXActive(false);
-	GetWorldTimerManager().SetTimer(FireRateControllerTimer, this, &ARifleWeapon::ControlFireRateDelay, WeaponInfo.ShootingRate, false);
-	/*const auto MyCharacter = Cast<APawn>(GetOwner());
-	check(MyCharacter);
-	Client_Recoil(MyCharacter, false);*/
+	if (bMadeAnyShots)
+	{
+		bMadeAnyShots = false;
+		bHasPassedFireRateDelay = false;
+		GetWorldTimerManager().SetTimer(FireRateControllerTimer, this, &ARifleWeapon::ControlFireRateDelay, WeaponInfo.ShootingRate, false);
+	}
+	//Client_Recoil(MyCharacter, false);
 }
 
 void ARifleWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -62,14 +64,15 @@ void ARifleWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 void ARifleWeapon::MakeShot()
 {
-	UE_LOG(LogTemp, Display, TEXT("Delay has %sbeen passed"), bHasPassedFireRateDelay ? TEXT(" ") : TEXT("not "));
-	if (!CanShoot() && !WeaponComponent->CanShoot() && HasAuthority())
+	if (!CanShoot() || !WeaponComponent->CanShoot() || !HasAuthority())
 	{
+		bMadeAnyShots = false;
 		StopFire();
 		return;
 	} 
 
 	if (!MyCharacter || !MyCharacter->GetCharacterMovement()) return;
+	bMadeAnyShots = true;
 	FVector TraceStart, TraceEnd;
 	FRotator EyesRotation;
 	MyCharacter->GetActorEyesViewPoint(TraceStart, EyesRotation);
@@ -95,6 +98,7 @@ void ARifleWeapon::MakeShot()
 	ReduceAmmo();
 	PlayImpactFX(HitResult);
 	SpawnTraceFX(WeaponMesh->GetSocketLocation(MuzzleSocketName), TraceEnd);
+	MyCharacter->PlayCameraShakeRequest(ShootCameraShake);
 	OnTraceAppeared.Execute(TraceEnd);
 	//UKismetSystemLibrary::DrawDebugArrow(this, TraceStart, TraceEnd, 5.0f, FLinearColor::Red, 5.0f, 1.0f);
 	Client_Recoil(MyCharacter, true);

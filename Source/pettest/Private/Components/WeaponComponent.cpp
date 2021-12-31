@@ -87,7 +87,7 @@ void UWeaponComponent::SpawnTPPWeapon()
     TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
 
     FTimerHandle TestTimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.5f, false);
+    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.45f, false);
 }
 
 void UWeaponComponent::SpawnFPPWeapon_Implementation()

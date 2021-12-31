@@ -15,6 +15,7 @@ class UMyCharacterMovementComponent;
 class UWeaponComponent;
 class USoundCue;
 class USoundWave;
+class UCameraShakeBase;
 
 UCLASS()
 class PETTEST_API APlayerCharacter : public ACharacter
@@ -36,6 +37,7 @@ public:
 	void OnCameraUpdate(const FVector& CameraLocation, const FRotator& CameraRotation);
 	USkeletalMeshComponent* GetInnerMesh() const { return InnerMesh; }
 	UWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+	void PlayCameraShakeRequest(TSubclassOf<UCameraShakeBase> CameraShake, float Scale = 1.0f);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
@@ -70,7 +72,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Sound")
 	USoundCue* BodyfallSound;
-
+	
 	virtual void BeginPlay() override;
 
 	UFUNCTION(Server, Unreliable, Category = "Death")
@@ -107,6 +109,9 @@ private:
 
 	UFUNCTION(Server, Unreliable, Category = "Movement")
 	void OnMoveRightReleased();
+
+	UFUNCTION(Client, Unreliable)
+	void Client_PlayCameraShake(TSubclassOf<UCameraShakeBase> CameraShake, float Scale);
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void StartFire();

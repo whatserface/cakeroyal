@@ -8,6 +8,7 @@
 #include "HealthComponent.generated.h"
 
 class APlayerCharacter;
+class UCameraShakeBase;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PETTEST_API UHealthComponent : public UActorComponent
@@ -43,6 +44,9 @@ protected:
 	UPROPERTY(Transient, Replicated)
 	class APlayerCharacter* MyPawn;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
+	TSubclassOf<UCameraShakeBase> DamageCameraShake;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Health", meta = (ClampMin = "0"))
 	float MaxHealth = 100.0f;
 
@@ -63,6 +67,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Heal", meta = (ClampMin = "0"))
 	float HPToHeal = 20.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (ClampMin = "0"))
+	float ArmorCameraShakeScale = 0.4f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (ClampMin = "0"))
+	float HealthCameraShakeScale = 1.0f;
 
 	virtual void BeginPlay() override;
 
