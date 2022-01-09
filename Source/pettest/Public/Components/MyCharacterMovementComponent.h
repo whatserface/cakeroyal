@@ -19,6 +19,7 @@ public:
 	virtual float GetMaxSpeed() const override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void SetRunModifier(float NewModifier);
+	float GetDefaultRunModifier() const { return RunModifier; }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = "1.5", ClampMax = "12"))

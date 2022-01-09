@@ -49,6 +49,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Shooting")
 	float BulletSpreadAloft = 23.f;
 
+	UFUNCTION(Server, Unreliable)
+	void MakeShot();
+	
+	UFUNCTION(Client, Unreliable)
+	void StartFireClient();
+	
+	UFUNCTION(Client, Unreliable)
+	void StopFireClient();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Shooting")
 	void Recoil(APawn* ApplyTo);
 
@@ -61,7 +70,6 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable)
 	void PlayImpactFX(const FHitResult& Hit);
 
-	virtual void MakeShot() override;
 	virtual void BeginPlay() override;
 
 private:

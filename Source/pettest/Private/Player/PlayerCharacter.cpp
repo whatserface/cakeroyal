@@ -52,7 +52,13 @@ void APlayerCharacter::BeginPlay()
 	UpdateMeshes();
 
 	check(HealthComponent);
+	check(WeaponComponent);
+	check(CustomMovementComponent);
+	checkf(CustomMovementComponent->GetDefaultRunModifier() == RunModifier, TEXT("Character's run modifier doesn't match with Custom Mov Comp. Go into Character BP, look for movement component, set the value of run modifier the same as it is on character, so they are equal"));
 	HealthComponent->OnDeath.AddUObject(this, &APlayerCharacter::Server_OnDeath);
+	if (HasAuthority()) {
+		LandedDelegate.AddDynamic(this, &APlayerCharacter::OnCharacterLanded);
+	}
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -266,7 +272,7 @@ void APlayerCharacter::PlaySoundWaveLocally_Implementation(USoundWave* SoundToPl
 	UGameplayStatics::PlaySound2D(GetWorld(), SoundToPlay, VolumeMultiplier);
 }
 
-void APlayerCharacter::PlayCameraShakeRequest(TSubclassOf<UCameraShakeBase> CameraShake, float Scale/*= 1.0f*/)
+void APlayerCharacter::PlayCameraShakeRequest(TSubclassOf<UCameraShakeBase> CameraShake, float Scale/* = 1.0f*/)
 {
 	if (HasAuthority()) Client_PlayCameraShake(CameraShake, Scale);
 }
@@ -277,4 +283,15 @@ void APlayerCharacter::Client_PlayCameraShake_Implementation(TSubclassOf<UCamera
 	if (!PC || !PC->PlayerCameraManager) return;
 
 	PC->PlayerCameraManager->StartCameraShake(CameraShake, Scale);
+}
+
+void APlayerCharacter::OnCharacterLanded(const FHitResult& Hit)
+{
+	if (!HasAuthority()) return;
+
+	const auto FallVelocityZ = -GetVelocity().Z;
+	if (FallVelocityZ < LandedDamageVelocity.X) return;
+
+	const auto FinalDamage = FMath::GetMappedRangeValueClamped(LandedDamageVelocity, LandedDamage, FallVelocityZ);
+	TakeDamage(FinalDamage, FDamageEvent{}, nullptr, nullptr);
 }

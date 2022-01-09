@@ -58,6 +58,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	UAnimMontage* ReloadMontageFPP;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement")
+	FVector2D LandedDamageVelocity = FVector2D(900.0f, 2000.0f);
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement")
+	FVector2D LandedDamage = FVector2D(10.0f, 100.0f);
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Death")
 	float LastLifeSpan = 2.5f;
 	
@@ -88,6 +94,9 @@ private:
 	FMatrix DefMesh;
 	FTimerHandle ClientShootingTimer; // plays shoot animation
 	FTimerDelegate ClientShootingTimerDel;
+
+	UFUNCTION()
+	void OnCharacterLanded(const FHitResult& Hit);
 
 	UPROPERTY(Replicated)
 	bool WantsToRun = false;

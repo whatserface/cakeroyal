@@ -35,16 +35,21 @@ void ARifleWeapon::StartFire()
 {
 	if (!HasAuthority()) return;
 
+	StartFireClient();
+	InitFX();
+}
+
+void ARifleWeapon::StartFireClient_Implementation()
+{
 	GetWorldTimerManager().SetTimer(ShootingTimer, this, &ARifleWeapon::MakeShot, WeaponInfo.ShootingRate, true);
 	MakeShot();
-	InitFX();
 }
 
 void ARifleWeapon::StopFire()
 {
 	if (!GetOwner() || !HasAuthority()) return;
 	
-	GetWorldTimerManager().ClearTimer(ShootingTimer);
+	StopFireClient();
 	SetFXActive(false);
 	if (bMadeAnyShots)
 	{
@@ -55,6 +60,11 @@ void ARifleWeapon::StopFire()
 	//Client_Recoil(MyCharacter, false);
 }
 
+void ARifleWeapon::StopFireClient_Implementation()
+{
+	GetWorldTimerManager().ClearTimer(ShootingTimer);
+}
+
 void ARifleWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -62,9 +72,9 @@ void ARifleWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	//
 }
 
-void ARifleWeapon::MakeShot()
+void ARifleWeapon::MakeShot_Implementation()
 {
-	if (!CanShoot() || !WeaponComponent->CanShoot() || !HasAuthority())
+	if (!CanShoot() || !WeaponComponent->CanShoot())
 	{
 		bMadeAnyShots = false;
 		StopFire();
@@ -142,7 +152,6 @@ void ARifleWeapon::PlayImpactFX_Implementation(const FHitResult& Hit)
 
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactData.NiagaraEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
 	UGameplayStatics::PlaySoundAtLocation(this, ImpactData.ImpactSound, Hit.ImpactPoint);
-	UE_LOG(LogTemp, Display, TEXT("Playing sound"));
 }
 
 void ARifleWeapon::SpawnTraceFX_Implementation(const FVector& TraceStart, const FVector& TraceEnd)

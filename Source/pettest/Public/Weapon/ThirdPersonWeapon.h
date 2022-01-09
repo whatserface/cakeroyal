@@ -65,7 +65,6 @@ protected:
 
 	virtual void BeginPlay() override;
 	void ReduceAmmo();
-	virtual void MakeShot() { return; }
 	
 	void LogAmmo();
 

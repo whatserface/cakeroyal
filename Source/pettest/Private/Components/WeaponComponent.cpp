@@ -86,8 +86,7 @@ void UWeaponComponent::SpawnTPPWeapon()
 
     TPPWeapon->OnTraceAppeared.BindUFunction(this, TEXT("TraceAppeared"));
 
-    FTimerHandle TestTimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(TestTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.45f, false);
+    GetWorld()->GetTimerManager().SetTimer(SpawnFPPWeaponTimerHandle, this, &UWeaponComponent::SpawnFPPWeapon, 0.2f, true);
 }
 
 void UWeaponComponent::SpawnFPPWeapon_Implementation()
@@ -96,6 +95,10 @@ void UWeaponComponent::SpawnFPPWeapon_Implementation()
         UE_LOG(LogWeaponComponent, Warning, TEXT("Pawn isn't locally controlled"));
         return;
     }
+    if (!TPPWeapon) return;
+
+    StopSpawnTimer();
+
     // assigning delegates to client, because they don't replicate
     if (!TPPWeapon->OnAmmoChanged.IsBound()) {
         TPPWeapon->OnAmmoChanged.BindUObject(this, &UWeaponComponent::AmmoChanged);
@@ -240,7 +243,6 @@ bool UWeaponComponent::CanReload() const
 void UWeaponComponent::AmmoChanged(int32 NewAmmo)
 {
     if (!MyPawn || !MyPawn->IsLocallyControlled()) return;
-    UE_LOG(LogTemp, Display, TEXT("Delegate Invoked in component! Bullets: %i, it %s"), NewAmmo, (GetOwnerRole() == ROLE_Authority) ? TEXT("Ran on server") : TEXT("didn't run on server"));
 
     OnAmmoChanged.ExecuteIfBound(NewAmmo);
     if (NewAmmo == 0 && !bReloadAnimInProgress)
@@ -252,4 +254,14 @@ void UWeaponComponent::AmmoChanged(int32 NewAmmo)
 void UWeaponComponent::TraceAppeared_Implementation(FVector TraceEnd)
 {
     OnTraceAppeared.ExecuteIfBound(TraceEnd);
+}
+
+bool UWeaponComponent::StopSpawnTimer_Validate()
+{
+    return GetWorld() && GetWorld()->GetTimerManager().IsTimerActive(SpawnFPPWeaponTimerHandle);
+}
+
+void UWeaponComponent::StopSpawnTimer_Implementation()
+{
+    GetWorld()->GetTimerManager().ClearTimer(SpawnFPPWeaponTimerHandle);
 }

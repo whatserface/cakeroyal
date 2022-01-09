@@ -60,6 +60,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	/** Because of the replication unpredictability not always the*/
+	FTimerHandle SpawnFPPWeaponTimerHandle;
+
 	UPROPERTY(Replicated)
 	AThirdPersonWeapon* TPPWeapon = nullptr;
 	
@@ -67,9 +70,6 @@ private:
 
 	UPROPERTY(Replicated)
 	bool bReloadAnimInProgress = false;
-
-	void SpawnTPPWeapon();
-	void AmmoChanged(int32 AmmoBullets);
 
 	UFUNCTION(Client, Unreliable, Category = "Weapon")
 	void SpawnFPPWeapon();
@@ -79,6 +79,12 @@ private:
 
 	UFUNCTION(Client, Unreliable, Category = "VFX")
 	void TraceAppeared(FVector TraceEnd);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void StopSpawnTimer();
+
+	void SpawnTPPWeapon();
+	void AmmoChanged(int32 AmmoBullets);
 
 	void OnReloadFinished(USkeletalMeshComponent* MeshComp);
 	void InitAnimations();
