@@ -42,8 +42,7 @@ void UHealthComponent::OnTakeAnyDamage_Implementation(AActor* DamagedActor, floa
 	}
 	
 	if (Armor > 0.0f) {
-		UE_LOG(LogTemp, Display, TEXT("Armor: %.2f"), Armor);
-		MyPawn->PlayCameraShakeRequest(DamageCameraShake, ArmorCameraShakeScale);
+		//MyPawn->PlayCameraShakeRequest(DamageCameraShake, ArmorCameraShakeScale);
 		SetArmor(Armor - Damage);
 	}
 	else {

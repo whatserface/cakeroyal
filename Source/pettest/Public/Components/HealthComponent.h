@@ -42,7 +42,7 @@ public:
 
 protected:
 	UPROPERTY(Transient, Replicated)
-	class APlayerCharacter* MyPawn;
+	APlayerCharacter* MyPawn;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX")
 	TSubclassOf<UCameraShakeBase> DamageCameraShake;
@@ -67,9 +67,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Heal", meta = (ClampMin = "0"))
 	float HPToHeal = 20.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (ClampMin = "0"))
-	float ArmorCameraShakeScale = 0.4f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "VFX", meta = (ClampMin = "0"))
 	float HealthCameraShakeScale = 1.0f;
@@ -85,6 +82,7 @@ private:
 	UPROPERTY(Replicated)
 	float Armor = 0.0f;
 
+	/** The heal part is cycled, hence we need to know when to stop healing, basically how far the heal should go, so we know when to stop*/
 	float FiniteHP;
 
 	UFUNCTION(Server, Reliable)
