@@ -179,7 +179,6 @@ void UWeaponComponent::PlayReloadAnim_Implementation()
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("Stopping fire from comp"));
         OnAmmoChanged.Execute(0);
     }
 }
@@ -225,7 +224,6 @@ void UWeaponComponent::OnReloadFinished(USkeletalMeshComponent* MeshComp)
     if (GetOwnerRole() != ROLE_Authority  || !TPPWeapon || !MyPawn || !(MeshComp == MyPawn->GetInnerMesh() || MeshComp == MyPawn->GetMesh())) return;
 
     MyPawn->SetCanRun(true);
-    UE_LOG(LogTemp, Display, TEXT("Reload finished on %s"), (GetNetMode() == ROLE_AutonomousProxy) ? TEXT("owning client") : TEXT("different client"));
     TPPWeapon->Reload();
     bReloadAnimInProgress = false;
 }

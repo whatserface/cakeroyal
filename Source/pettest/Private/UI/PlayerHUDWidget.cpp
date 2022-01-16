@@ -49,7 +49,6 @@ void UPlayerHUDWidget::ManageInterpolations(float DeltaTime)
 	}
 	if (bShouldInterpolateArmor && ArmorProgressBar) {
 		InterpolateArmorFrom = FMath::FInterpTo(InterpolateArmorFrom, InterpolateArmorTo, DeltaTime, 5.f);
-		UE_LOG(LogTemp, Display, TEXT("Interpolating Armor: %.2f"), InterpolateArmorFrom);
 		ArmorProgressBar->SetPercent(InterpolateArmorFrom / MaxArmor);
 
 		if (FMath::IsNearlyEqual(InterpolateArmorFrom, InterpolateArmorTo, 0.01f)) 

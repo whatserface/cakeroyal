@@ -37,6 +37,7 @@ void ACharacterController::StartSpectating()
 	Client_StartSpectating();
 }
 
+
 void ACharacterController::StartPlaying()
 {
 	if (!HasAuthority()) return;

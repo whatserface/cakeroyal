@@ -15,7 +15,8 @@
 #include "Sound/SoundCue.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/AudioComponent.h"
-
+#include "AudioThread.h"
+#include "Sounds/SoundNodeLocalPlayer.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRifleWeapon, All, All)
 
@@ -28,6 +29,7 @@ void ARifleWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	GetWorldTimerManager().SetTimer(SoundNodeDelay, this, &ARifleWeapon::AddActorCacheToSoundNode, 0.3f, false);
 	if (HasAuthority()) MyCharacter = Cast<APlayerCharacter>(GetOwner());
 }
 
@@ -185,4 +187,16 @@ void ARifleWeapon::SetFXActive_Implementation(bool IsActive)
 	{
 		IsActive ? FireAudioComponent->Play() : FireAudioComponent->Stop();
 	}
+}
+
+void ARifleWeapon::AddActorCacheToSoundNode()
+{
+	const auto PawnOwner = GetOwner<APawn>();
+	const bool bLocallyControlled = PawnOwner ? PawnOwner->IsLocallyControlled() : false;
+	UE_LOG(LogTemp, Display, TEXT("Locally controlled: %s"), bLocallyControlled ? TEXT("true") : TEXT("false"));
+	const uint32 UniqueID = GetUniqueID();
+	FAudioThread::RunCommandOnAudioThread([UniqueID, bLocallyControlled]()
+		{
+			USoundNodeLocalPlayer::GetLocallyControlledActorCache().Add(UniqueID, bLocallyControlled);
+		});
 }

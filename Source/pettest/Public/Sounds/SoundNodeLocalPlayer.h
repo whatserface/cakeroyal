@@ -21,4 +21,13 @@ class PETTEST_API USoundNodeLocalPlayer : public USoundNode
 
 #endif
 
+public:
+	static TMap<uint32, bool>& GetLocallyControlledActorCache()
+	{
+		check(IsInAudioThread());
+		return LocallyControlledActorCache;
+	}
+
+private:
+	static TMap<uint32, bool> LocallyControlledActorCache;
 };

@@ -7,44 +7,18 @@
 
 #define LOCTEXT_NAMESPACE "LocalPlayer"
 
+TMap<uint32, bool> USoundNodeLocalPlayer::LocallyControlledActorCache;
+
 void USoundNodeLocalPlayer::ParseNodes(FAudioDevice* AudioDevice, const UPTRINT NodeWaveInstanceHash, FActiveSound& ActiveSound, const FSoundParseParameters& ParseParams, TArray<FWaveInstance*>& WaveInstances)
 {
-	// The accesses to the Pawn will be unsafe once we thread audio
-	check(IsInGameThread());
-
-	TArray<AActor*> OutActors;
-	UGameplayStatics::GetAllActorsWithTag(ActiveSound.GetWorld(), "Player", OutActors);
-	AActor* SoundOwner = nullptr;
-	for (auto Actor: OutActors)
+	bool bLocallyControlled = false;
+	if (bool* LocallyControlledPtr = LocallyControlledActorCache.Find(ActiveSound.GetOwnerID()))
 	{
-		if (Actor->GetName() == ActiveSound.GetOwnerName() && Actor->GetUniqueID() == ActiveSound.GetOwnerID())
-		{
-			SoundOwner = Actor;
-			break;
-		}
-	}
-	if (SoundOwner == nullptr)
-	{
-		if (ChildNodes[1])
-		{
-			ChildNodes[1]->ParseNodes(AudioDevice, GetNodeWaveInstanceHash(NodeWaveInstanceHash, ChildNodes[1], 1), ActiveSound, ParseParams, WaveInstances); 
-		}
-		return;
+		bLocallyControlled = *LocallyControlledPtr;
 	}
 
-	APlayerController* PCOwner = Cast<APlayerController>(SoundOwner);
-	APawn* PawnOwner = PCOwner ? PCOwner->GetPawn() : Cast<APawn>(SoundOwner);
-	
-	// If SoundOwner is weapon, then the pawn we're looking for is the owner of that weapon actor
-	if (!PawnOwner) 
-	{
-		PCOwner = SoundOwner->GetOwner() ? Cast<APlayerController>(SoundOwner->GetOwner()) : nullptr;
-		PawnOwner = PCOwner ? PCOwner->GetPawn() : 
-			SoundOwner->GetOwner() ? Cast<APawn>(SoundOwner->GetOwner()) : nullptr;
-	}
+	const int32 PlayIndex = bLocallyControlled ? 0 : 1;
 
-	const bool bIsLocallyControlled = PawnOwner && PawnOwner->IsLocallyControlled() && Cast<APlayerController>(PawnOwner->Controller);
-	const int32 PlayIndex = bIsLocallyControlled ? 0 : 1;
 	if (PlayIndex < ChildNodes.Num() && ChildNodes[PlayIndex])
 	{
 		ChildNodes[PlayIndex]->ParseNodes(AudioDevice, GetNodeWaveInstanceHash(NodeWaveInstanceHash, ChildNodes[PlayIndex], PlayIndex), ActiveSound, ParseParams, WaveInstances);

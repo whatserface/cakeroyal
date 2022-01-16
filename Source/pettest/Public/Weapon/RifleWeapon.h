@@ -75,6 +75,8 @@ protected:
 private:
 	FTimerHandle ShootingTimer;
 
+	FTimerHandle SoundNodeDelay;
+
 	/** This timer handle controls whether the time of ShootingRate has passed or not.
 	So essentially because of it the player can't fire faster than rate of fire.*/
 	FTimerHandle FireRateControllerTimer;
@@ -100,4 +102,6 @@ private:
 	void SetFXActive(bool IsActive);
 
 	void ControlFireRateDelay();
+
+	void AddActorCacheToSoundNode();
 };
