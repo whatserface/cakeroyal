@@ -27,6 +27,7 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Destroyed();
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	bool IsRunning() const;

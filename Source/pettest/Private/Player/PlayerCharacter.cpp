@@ -163,18 +163,27 @@ void APlayerCharacter::SetbWantsToRun_Implementation(bool Value)
 	WantsToRun = Value;
 }
 
+void APlayerCharacter::Destroyed()
+{
+	TakeDamage(BIG_NUMBER, FDamageEvent{}, nullptr, nullptr);
+	Super::Destroyed();
+}
+
 void APlayerCharacter::Server_OnDeath_Implementation()
 {
 	PlaySoundWaveLocally(DeathSoundWave, 1.f);
-	SetLifeSpan(LastLifeSpan);
-	WeaponComponent->StopFire();
+	if (!IsPendingKill() && !IsActorBeingDestroyed())
+	{
+		SetLifeSpan(LastLifeSpan);
+		WeaponComponent->StopFire();
 
-	UE_LOG(LogPlayerCharacter, Display, TEXT("Player: %s will die in a few seconds"), *GetName());
-	Multicast_Ragdoll();
+		UE_LOG(LogPlayerCharacter, Display, TEXT("Player: %s will die in a few seconds"), *GetName());
+		Multicast_Ragdoll();
 
-	GetCharacterMovement()->DisableMovement();
-	InnerMesh->SetVisibility(false, true);
-
+		GetCharacterMovement()->DisableMovement();
+		InnerMesh->SetVisibility(false, true);
+	}
+	
 	const auto CharController = Cast<ACharacterController>(Controller);
 	if (!CharController) return;
 
